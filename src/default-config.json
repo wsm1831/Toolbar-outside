@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "appearance": {
     "idleOpacity": 0.35,
     "tileSize": 52
@@ -169,19 +169,22 @@
           "id": "korail",
           "name": "코레일",
           "type": "url",
-          "target": "https://www.letskorail.com"
+          "target": "https://www.letskorail.com",
+          "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iayIgeDE9IjAuOCIgeTE9IjAiIHgyPSIwLjIiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMDA1MEE4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMC42IiBzdG9wLWNvbG9yPSIjMDA1QkI1Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzBBOEFEMiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxjbGlwUGF0aCBpZD0iYyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNDciLz48L2NsaXBQYXRoPgogIDwvZGVmcz4KICA8ZyBjbGlwLXBhdGg9InVybCgjYykiPgogICAgPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9InVybCgjaykiLz4KICAgIDxwYXRoIGQ9Ik0tMiAyNSBDIDI1IDE4LCA3MCAyMCwgMTAyIDMyIEwgMTAyIDM3IEMgNzAgMjgsIDI4IDI3LCAtMiAzMiBaIiBmaWxsPSIjZmZmIi8+CiAgICA8cGF0aCBkPSJNLTIgNDIgQyAyOCAzNywgNzAgNDAsIDEwMiA1NCBMIDEwMiA2MSBDIDcyIDQ5LCAzMCA0NiwgLTIgNTAgWiIgZmlsbD0iI2ZmZiIvPgogIDwvZz4KPC9zdmc+Cg=="
         },
         {
           "id": "opinet",
           "name": "오피넷 (유가 정보)",
           "type": "url",
-          "target": "https://www.opinet.co.kr"
+          "target": "https://www.opinet.co.kr",
+          "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgNjAiPgogIDxlbGxpcHNlIGN4PSIyMiIgY3k9IjMwIiByeD0iMTYuNSIgcnk9IjIwIiBmaWxsPSJub25lIiBzdHJva2U9IiNGRjczMDAiIHN0cm9rZS13aWR0aD0iMTAiLz4KICA8dGV4dCB4PSI0MyIgeT0iNDciIGZvbnQtZmFtaWx5PSJBcmlhbCwgSGVsdmV0aWNhLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iNzAwIiBmb250LXNpemU9IjMwIiBmaWxsPSIjNEQ0RDREIiBsZXR0ZXItc3BhY2luZz0iLTAuNSI+cGluZXQ8L3RleHQ+Cjwvc3ZnPgo="
         },
         {
           "id": "tmoney",
           "name": "티머니 고속·시외버스",
           "type": "url",
-          "target": "https://txbus.t-money.co.kr/"
+          "target": "https://txbus.t-money.co.kr/",
+          "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MCAxMDAiPgogIDxwYXRoIGQ9Ik00OSA2IEg3MSBBOC41IDguNSAwIDAgMSA3MSAyMyBINTEgQyA0OS42IDIzIDQ5IDIxLjYgNDkgMjAgWiIgZmlsbD0iI0YwODIwMCIvPgogIDxwYXRoIGQ9Ik0xNSAxNC41IEgzMCBDIDM3IDE0LjUgNDAgMTkgNDAgMjYgViA4NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOEUwRTg1IiBzdHJva2Utd2lkdGg9IjE4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg=="
         }
       ]
     },
