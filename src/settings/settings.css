@@ -104,7 +104,7 @@ h2 { font-size: 15px; margin: 24px 0 6px; }
 #items { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .item {
   display: grid;
-  grid-template-columns: 40px minmax(110px, 1fr) 104px minmax(160px, 2fr) auto;
+  grid-template-columns: 18px 40px minmax(110px, 1fr) 104px minmax(160px, 2fr) auto;
   gap: 8px;
   align-items: center;
   padding: 8px;
@@ -185,3 +185,19 @@ footer {
   border-top: 1px solid var(--line);
   background: #fff;
 }
+
+/* 끌어서 순서 바꾸기 */
+.grip {
+  display: grid;
+  place-items: center;
+  color: #A5AEBD;
+  cursor: grab;
+}
+.grip:hover { color: var(--ink); }
+.nav .nm { flex: 1; }
+.nav .grip { opacity: 0; }
+.nav:hover .grip, .nav.on .grip { opacity: 1; }
+.dragging { opacity: 0.4; }
+.item.drop-before, .cat-row.drop-before { box-shadow: 0 -3px 0 var(--accent); }
+.item.drop-after, .cat-row.drop-after { box-shadow: 0 3px 0 var(--accent); }
+.cat-row { border-radius: 8px; }

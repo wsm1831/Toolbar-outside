@@ -17,8 +17,10 @@
         <span id="clock-time"></span>
         <span id="clock-date"></span>
       </div>
-      <button id="btn-settings" class="tile tile-neutral" data-tip="설정" aria-label="설정"></button>
-      <button id="btn-awake" class="tile tile-awake" aria-pressed="false" aria-label="화면 보호기 차단"><span class="lamp"></span></button>
+      <div class="side-stack">
+        <button id="btn-awake" class="mini mini-awake" aria-pressed="false" aria-label="화면 보호기 차단"><span class="lamp"></span></button>
+        <button id="btn-settings" class="mini mini-settings" data-tip="설정" aria-label="설정"></button>
+      </div>
     </nav>
   </div>
   <div id="tip" role="tooltip" hidden></div>

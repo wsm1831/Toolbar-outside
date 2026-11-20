@@ -15,6 +15,60 @@
   const uid = () => Math.random().toString(36).slice(2, 9);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  // ---------- 끌어서 순서 바꾸기 ----------
+  // 손잡이(.grip)를 잡고 끌면 그 줄만 움직인다. 놓으면 배열 순서를 바꾸고 onMove(옮긴 뒤 위치) 호출.
+  function sortable(container, arr, onMove) {
+    container.querySelectorAll('.grip').forEach((g) => {
+      g.addEventListener('mousedown', () => { g.closest('[data-idx]').draggable = true; });
+    });
+    container._sort = { arr, onMove };
+    if (container._sortReady) return; // 목록 요소는 그대로라 이벤트는 한 번만 연결
+    container._sortReady = true;
+    let from = -1;
+    const rows = () => [...container.children];
+    container.addEventListener('mouseup', () => rows().forEach((r) => { r.draggable = false; }));
+    container.addEventListener('dragstart', (e) => {
+      const row = e.target.closest('[data-idx]');
+      if (!row || !row.draggable) return e.preventDefault();
+      from = Number(row.dataset.idx);
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(from));
+    });
+    container.addEventListener('dragover', (e) => {
+      if (from < 0) return;
+      e.preventDefault();
+      const row = e.target.closest('[data-idx]');
+      rows().forEach((r) => r.classList.remove('drop-before', 'drop-after'));
+      if (!row) return;
+      const r = row.getBoundingClientRect();
+      row.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-before' : 'drop-after');
+    });
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const row = container.querySelector('.drop-before, .drop-after');
+      if (row && from >= 0) {
+        let to = Number(row.dataset.idx) + (row.classList.contains('drop-after') ? 1 : 0);
+        if (to > from) to -= 1;
+        if (to !== from) {
+          const { arr: list, onMove: done } = container._sort;
+          const [moved] = list.splice(from, 1);
+          list.splice(to, 0, moved);
+          from = -1;
+          markDirty();
+          done(to);
+          return;
+        }
+      }
+      cleanup();
+    });
+    const cleanup = () => {
+      from = -1;
+      rows().forEach((r) => { r.draggable = false; r.classList.remove('dragging', 'drop-before', 'drop-after'); });
+    };
+    container.addEventListener('dragend', cleanup);
+  }
+
   function markDirty() {
     dirty = true;
     $('#save').disabled = false;
@@ -22,17 +76,26 @@
   }
 
   // ---------- 왼쪽 목록 ----------
+  let curCat = null; // 선택한 카테고리 (순서가 바뀌어도 선택 유지)
   function renderSide() {
+    curCat = view.kind === 'cat' ? cfg.categories[view.index] : null;
     const list = $('#cat-list');
     list.innerHTML = '';
     cfg.categories.forEach((c, i) => {
       const li = document.createElement('li');
-      li.innerHTML = `<button class="nav"><span class="dot" style="--c:${esc(c.color)}">${window.icon(c.icon, 16)}</span><span></span></button>`;
-      li.querySelector('span:last-child').textContent = c.name;
+      li.dataset.idx = i;
+      li.className = 'cat-row';
+      li.innerHTML = `<button class="nav"><span class="dot" style="--c:${esc(c.color)}">${window.icon(c.icon, 16)}</span><span class="nm"></span><span class="grip" title="끌어서 순서 바꾸기">${window.icon('grip-vertical', 16)}</span></button>`;
+      li.querySelector('.nm').textContent = c.name;
       const b = li.firstElementChild;
       b.classList.toggle('on', view.kind === 'cat' && view.index === i);
       b.addEventListener('click', () => { view = { kind: 'cat', index: i }; render(); });
       list.appendChild(li);
+    });
+    sortable(list, cfg.categories, (to) => {
+      const cur = view.kind === 'cat' ? cfg.categories.indexOf(curCat) : -1;
+      if (cur >= 0) view.index = cur;
+      render();
     });
     $('#nav-general').classList.toggle('on', view.kind === 'general');
   }
@@ -67,20 +130,21 @@
     const ol = $('#items');
     ol.innerHTML = '';
     cat.items.forEach((item, i) => ol.appendChild(itemRow(cat, item, i)));
+    sortable(ol, cat.items, () => renderCat());
   }
 
   function itemRow(cat, item, i) {
     const li = document.createElement('li');
     li.className = 'item';
+    li.dataset.idx = i;
     li.style.setProperty('--c', cat.color);
     li.innerHTML = `
+      <span class="grip" title="끌어서 순서 바꾸기" aria-hidden="true">${window.icon('grip-vertical', 18)}</span>
       <button class="ico" title="아이콘 이미지 바꾸기"></button>
       <input class="name" aria-label="이름">
       <select class="type" aria-label="종류">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
       <div class="target"></div>
       <div class="row-actions">
-        <button class="icon-only up" aria-label="위로" title="위로">${window.icon('arrow-up', 16)}</button>
-        <button class="icon-only down" aria-label="아래로" title="아래로">${window.icon('arrow-down', 16)}</button>
         <button class="icon-only danger del" aria-label="삭제" title="삭제">${window.icon('trash-2', 16)}</button>
       </div>`;
     const name = li.querySelector('.name');
@@ -146,8 +210,12 @@
       if (data) { item.icon = data; markDirty(); renderIco(); }
     });
 
-    li.querySelector('.up').addEventListener('click', () => move(cat.items, i, -1));
-    li.querySelector('.down').addEventListener('click', () => move(cat.items, i, 1));
+    // 키보드: Alt+↑/↓ 로도 순서 바꾸기
+    li.addEventListener('keydown', (e) => {
+      if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+      e.preventDefault();
+      move(cat.items, i, e.key === 'ArrowUp' ? -1 : 1);
+    });
     li.querySelector('.del').addEventListener('click', () => {
       if (!confirm(`'${item.name}' 항목을 삭제할까요?`)) return;
       cat.items.splice(i, 1); markDirty(); renderCat();
@@ -164,8 +232,6 @@
   }
 
   $('#cat-name').addEventListener('input', (e) => { cfg.categories[view.index].name = e.target.value; markDirty(); renderSide(); });
-  $('#cat-up').addEventListener('click', () => { const i = view.index; if (i > 0) { move(cfg.categories, i, -1); view.index = i - 1; render(); } });
-  $('#cat-down').addEventListener('click', () => { const i = view.index; if (i < cfg.categories.length - 1) { move(cfg.categories, i, 1); view.index = i + 1; render(); } });
   $('#cat-del').addEventListener('click', () => {
     const c = cfg.categories[view.index];
     if (!confirm(`'${c.name}' 카테고리와 안의 항목 ${c.items.length}개를 삭제할까요?`)) return;

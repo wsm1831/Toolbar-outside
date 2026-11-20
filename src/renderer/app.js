@@ -139,7 +139,7 @@
       b.addEventListener('click', () => toggleCategory(cat.id));
       cats.appendChild(b);
     }
-    $('#btn-settings').innerHTML = window.icon('settings', 24);
+    $('#btn-settings').innerHTML = window.icon('settings', 16);
   }
 
   function markActive() {
