@@ -315,6 +315,154 @@
     },
   };
 
-  window.TOOLS = { memo, datecalc, timer, textclean, cliphistory };
-  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록' };
+  // ---------- 단위 환산 (면적 · 길이) ----------
+  const UNITS = {
+    area: [
+      { k: 'm2', label: '㎡', f: 1 },
+      { k: 'py', label: '평', f: 400 / 121 },
+      { k: 'k_m2', label: '천㎡', f: 1000 },
+      { k: 'ha', label: 'ha (헥타르)', f: 10000 },
+      { k: 'km2', label: '㎢', f: 1e6 },
+    ],
+    length: [
+      { k: 'm', label: 'm', f: 1 },
+      { k: 'km', label: 'km', f: 1000 },
+      { k: 'cm', label: 'cm', f: 0.01 },
+      { k: 'ja', label: '자 (尺)', f: 10 / 33 },
+      { k: 'ri', label: '리 (里)', f: 400 },
+    ],
+  };
+  let unitMode = 'area';
+  const num = (v) => Number(String(v).replace(/,/g, '').trim());
+  const fmtNum = (n) => {
+    if (!isFinite(n)) return '';
+    const digits = Math.abs(n) >= 100 ? 2 : Math.abs(n) >= 1 ? 4 : 6;
+    return n.toLocaleString('ko-KR', { maximumFractionDigits: digits });
+  };
+  const unitconv = {
+    icon: 'ruler',
+    render(el, { api }) {
+      el.append(h(`
+        <div class="seg" role="tablist">
+          <button data-m="area">면적</button>
+          <button data-m="length">길이</button>
+        </div>
+        <div class="units"></div>
+        <p class="muted" style="margin:8px 0 0">아무 칸에나 숫자를 넣으면 나머지가 바뀝니다. 1평 = 400/121㎡ (약 3.3058㎡)</p>`));
+      const box = el.querySelector('.units');
+      let base = 1000; // 기준 단위(㎡ 또는 m) 값
+      function draw(skip) {
+        box.querySelectorAll('input').forEach((inp) => {
+          if (inp === skip) return;
+          inp.value = base === null ? '' : fmtNum(base / Number(inp.dataset.f));
+        });
+      }
+      function build() {
+        el.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.m === unitMode));
+        box.innerHTML = '';
+        base = unitMode === 'area' ? 10000 : 1000;
+        for (const u of UNITS[unitMode]) {
+          const row = h(`
+            <div class="unit-row">
+              <input type="text" inputmode="decimal" aria-label="${u.label}" data-f="${u.f}">
+              <span class="unit">${u.label}</span>
+              <button class="icon-btn" aria-label="${u.label} 값 복사" data-tip="복사">${window.icon('copy', 16)}</button>
+            </div>`);
+          const inp = row.querySelector('input');
+          inp.addEventListener('input', () => {
+            const v = num(inp.value);
+            base = inp.value.trim() === '' || !isFinite(v) ? null : v * Number(inp.dataset.f);
+            draw(inp);
+          });
+          row.querySelector('button').addEventListener('click', async () => {
+            await api.writeClipboard(String(inp.value).replace(/,/g, ''));
+            window.showToast(`${inp.value} ${u.label} 복사했습니다`, true);
+          });
+          box.appendChild(row);
+        }
+        draw();
+        box.querySelector('input').focus();
+      }
+      el.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => { unitMode = b.dataset.m; build(); }));
+      build();
+    },
+  };
+
+  // ---------- 금액 한글 표기 ----------
+  const KR_DIGIT = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+  const KR_SMALL = ['', '십', '백', '천'];
+  const KR_BIG = ['', '만', '억', '조', '경'];
+  // 공문서 방식: 일십, 일백, 일천처럼 '일'을 붙인다 (예: 금113,560원(금일십일만삼천오백육십원))
+  function toKorean(n, withIl = true) {
+    if (n === 0n) return '영';
+    let out = '';
+    let big = 0;
+    while (n > 0n) {
+      const group = Number(n % 10000n);
+      if (group) {
+        let g = '';
+        const ds = String(group).padStart(4, '0').split('').map(Number);
+        ds.forEach((d, i) => {
+          if (!d) return;
+          const unit = KR_SMALL[3 - i];
+          g += (d === 1 && unit && !withIl ? '' : KR_DIGIT[d]) + unit;
+        });
+        out = g + KR_BIG[big] + out;
+      }
+      n /= 10000n;
+      big += 1;
+    }
+    return out;
+  }
+  function toMixed(n) { // 12억 3,450만 6,789
+    const parts = [];
+    let big = 0;
+    while (n > 0n) {
+      const group = Number(n % 10000n);
+      if (group) parts.unshift(group.toLocaleString('ko-KR') + KR_BIG[big]);
+      n /= 10000n;
+      big += 1;
+    }
+    return parts.join(' ') || '0';
+  }
+  const krmoney = {
+    icon: 'banknote',
+    render(el, { api }) {
+      el.append(h(`
+        <div class="field"><label for="km-in">금액 (원)</label><input id="km-in" type="text" inputmode="numeric" placeholder="예: 113560" autocomplete="off"></div>
+        <div class="money-out"></div>
+        <p class="muted" style="margin:8px 0 0">공문서 표기는 「행정업무의 운영 및 혁신에 관한 규정 시행규칙」 제2조제2항 방식입니다.</p>`));
+      const inp = el.querySelector('#km-in');
+      const out = el.querySelector('.money-out');
+      function line(label, text) {
+        const row = h(`<div class="money-row"><div><div class="muted"></div><div class="mv"></div></div><button class="icon-btn" aria-label="복사" data-tip="복사">${window.icon('copy', 16)}</button></div>`);
+        row.querySelector('.muted').textContent = label;
+        row.querySelector('.mv').textContent = text;
+        row.querySelector('button').addEventListener('click', async () => {
+          await api.writeClipboard(text);
+          window.showToast('복사했습니다', true);
+        });
+        out.appendChild(row);
+      }
+      function calc() {
+        const raw = inp.value.replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+        out.innerHTML = '';
+        if (!raw) return;
+        if (raw.length > 20) { out.innerHTML = '<p class="muted">20자리(경 단위)까지만 바꿀 수 있습니다.</p>'; return; }
+        const n = BigInt(raw);
+        const comma = n.toLocaleString('ko-KR');
+        // 입력칸에 쉼표 넣기 (커서는 끝으로)
+        if (inp.value !== comma) inp.value = comma;
+        line('공문서 표기', `금${comma}원(금${toKorean(n)}원)`);
+        line('한글만', `${toKorean(n)}원`);
+        line('한글만 (일 생략)', `${toKorean(n, false)}원`);
+        line('숫자 + 단위', `${toMixed(n)}원`);
+      }
+      inp.addEventListener('input', calc);
+      inp.focus();
+    },
+  };
+
+  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory };
+  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록' };
 })();

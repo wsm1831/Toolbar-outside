@@ -4,7 +4,7 @@ Electron 판과 이후 C# WPF 판이 **같은 파일을 그대로 읽도록** �
 
 ```jsonc
 {
-  "version": 1,
+  "version": 2,
   "appearance": { "idleOpacity": 0.35, "tileSize": 52 },
   "awake": {                       // 녹색 불빛
     "enabled": true,               // 사용자가 켜 둔 상태
@@ -32,4 +32,5 @@ Electron 판과 이후 C# WPF 판이 **같은 파일을 그대로 읽도록** �
 | `icon` | (선택) `data:image/...` 직접 고른 이미지, 또는 `builtin:<lucide 아이콘 이름>` |
 
 - 경로에는 `%DOWNLOADS%`, `%DESKTOP%`, `%DOCUMENTS%`, `%PICTURES%`, `%HOME%` 과 Windows 환경 변수(`%USERPROFILE%` 등)를 쓸 수 있다.
-- 내장 도구 이름: `memo`, `datecalc`, `timer`, `textclean`, `cliphistory`
+- 내장 도구 이름: `memo`, `datecalc`, `unitconv`, `krmoney`, `timer`, `textclean`, `cliphistory`
+- `version` 이 기본값보다 낮으면 기존 파일을 백업하고 `categories` 만 새 기본값으로 바꾼다.

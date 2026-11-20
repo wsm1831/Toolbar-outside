@@ -36,11 +36,28 @@ const mock = (cfg) => {
   await page.hover('#dock');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${out}/2-hover.png` });
-  for (const [i, id] of [['3', 'web'], ['4', 'utils']]) {
+  for (const [i, id] of [['3', 'admin'], ['4', 'utils']]) {
     await page.click(`#cats [data-id="${id}"]`);
     await page.waitForTimeout(700);
     await page.screenshot({ path: `${out}/${i}-${id}.png` });
   }
+  await page.click('#pop .tile >> nth=3'); // 금액 한글 표기
+  await page.waitForTimeout(400);
+  await page.fill('#km-in', '113560');
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: `${out}/4b-krmoney.png` });
+  console.log('money:', await page.$$eval('.money-row .mv', (e) => e.map((x) => x.textContent)));
+  await page.click('.panel .back');
+  await page.waitForTimeout(500);
+  await page.click('#pop .tile >> nth=2'); // 단위 환산
+  await page.waitForTimeout(400);
+  await page.fill('.unit-row:nth-child(2) input', '1000');
+  await page.dispatchEvent('.unit-row:nth-child(2) input', 'input');
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: `${out}/4c-unit.png` });
+  console.log('units:', await page.$$eval('.unit-row input', (e) => e.map((x) => x.value)));
+  await page.click('.panel .back');
+  await page.waitForTimeout(500);
   await page.click('#pop .tile >> nth=1'); // 날짜 계산
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/5-datecalc.png` });
@@ -50,7 +67,7 @@ const mock = (cfg) => {
   // 애니메이션 중간 프레임
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
-  await page.click('#cats [data-id="apps"]');
+  await page.click('#cats [data-id="trip"]');
   await page.waitForTimeout(120);
   await page.screenshot({ path: `${out}/7-anim-mid.png` });
   const errs = [];

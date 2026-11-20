@@ -29,7 +29,8 @@ function loadConfig() {
   const file = CONFIG_FILE();
   if (fs.existsSync(file)) {
     try {
-      return JSON.parse(fs.readFileSync(file, 'utf8'));
+      const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return migrateConfig(cfg);
     } catch (err) {
       // 깨진 설정 파일은 지우지 않고 옆에 보관한 뒤 기본값으로 시작한다.
       const backup = userFile(`config.broken-${Date.now()}.json`);
@@ -40,6 +41,17 @@ function loadConfig() {
   const def = readDefaultConfig();
   writeConfig(def);
   return def;
+}
+
+// 기본 메뉴 구성이 바뀐 새 버전이면, 기존 파일을 보관하고 메뉴만 새 기본값으로 바꾼다.
+// (투명도·녹색 불빛·공휴일 설정은 그대로 둔다)
+function migrateConfig(cfg) {
+  const def = readDefaultConfig();
+  if ((cfg.version || 1) >= def.version) return cfg;
+  fs.copyFileSync(CONFIG_FILE(), userFile(`config.v${cfg.version || 1}-backup.json`));
+  const next = { ...cfg, version: def.version, categories: def.categories };
+  writeConfig(next);
+  return next;
 }
 
 function writeConfig(cfg) {

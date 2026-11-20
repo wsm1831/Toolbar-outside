@@ -381,6 +381,24 @@ body.awake #dock { opacity: 1; }
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 4px; }
 
+/* 단위 환산, 금액 표기 */
+.unit-row, .money-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.unit-row input { text-align: right; font-variant-numeric: tabular-nums; }
+.unit-row .unit { min-width: 76px; font-size: 13.5px; color: var(--ink); }
+.money-row {
+  grid-template-columns: 1fr auto;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.money-row .mv { font-size: 14.5px; line-height: 1.45; word-break: break-all; }
+
 /* ---------- 이름 풍선, 알림 ---------- */
 #tip {
   position: fixed;

@@ -195,7 +195,8 @@
     const row = document.createElement('div');
     row.className = 'row';
     const items = cat.items || [];
-    row.style.setProperty('--cols', Math.min(Math.max(items.length, 1), 10));
+    // 13개까지는 한 줄, 더 많으면 두 줄로 고르게 나눈다
+    row.style.setProperty('--cols', items.length > 13 ? Math.ceil(items.length / 2) : Math.max(items.length, 1));
     if (!items.length) {
       row.style.setProperty('--cols', 1);
       const empty = document.createElement('div');

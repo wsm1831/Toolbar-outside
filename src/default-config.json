@@ -1,51 +1,186 @@
 {
-  "version": 1,
+  "version": 2,
   "appearance": {
     "idleOpacity": 0.35,
     "tileSize": 52
   },
   "awake": {
     "enabled": true,
-    "quiet": { "on": true, "start": "11:30", "end": "13:00" }
+    "quiet": {
+      "on": true,
+      "start": "11:30",
+      "end": "13:00"
+    }
   },
   "categories": [
     {
-      "id": "web",
-      "name": "홈페이지",
-      "icon": "globe",
+      "id": "search",
+      "name": "검색엔진",
+      "icon": "search",
       "color": "#4C9BEF",
       "items": [
-        { "id": "naver", "name": "네이버", "type": "url", "target": "https://www.naver.com" },
-        { "id": "law", "name": "국가법령정보센터", "type": "url", "target": "https://www.law.go.kr" },
-        { "id": "g2b", "name": "나라장터", "type": "url", "target": "https://www.g2b.go.kr" },
-        { "id": "alio", "name": "알리오", "type": "url", "target": "https://www.alio.go.kr" },
-        { "id": "datagokr", "name": "공공데이터포털", "type": "url", "target": "https://www.data.go.kr" },
-        { "id": "gov24", "name": "정부24", "type": "url", "target": "https://www.gov.kr" }
+        {
+          "id": "naver",
+          "name": "네이버",
+          "type": "url",
+          "target": "https://www.naver.com"
+        },
+        {
+          "id": "daum",
+          "name": "다음 (카카오)",
+          "type": "url",
+          "target": "https://www.daum.net"
+        },
+        {
+          "id": "google",
+          "name": "구글",
+          "type": "url",
+          "target": "https://www.google.com"
+        }
       ]
     },
     {
-      "id": "apps",
-      "name": "작업도구",
-      "icon": "wrench",
+      "id": "ind",
+      "name": "산업단지",
+      "icon": "factory",
       "color": "#E9A23B",
       "items": [
-        { "id": "notepad", "name": "메모장", "type": "app", "target": "notepad.exe" },
-        { "id": "calc", "name": "계산기", "type": "app", "target": "calc.exe" },
-        { "id": "snip", "name": "화면 캡처", "type": "app", "target": "ms-screenclip:" },
-        { "id": "paint", "name": "그림판", "type": "app", "target": "mspaint.exe" },
-        { "id": "explorer", "name": "파일 탐색기", "type": "app", "target": "explorer.exe" },
-        { "id": "taskmgr", "name": "작업 관리자", "type": "app", "target": "taskmgr.exe" }
+        {
+          "id": "kicox",
+          "name": "한국산업단지공단",
+          "type": "url",
+          "target": "https://www.kicox.or.kr"
+        },
+        {
+          "id": "industryland",
+          "name": "산업입지정보시스템",
+          "type": "url",
+          "target": "https://www.industryland.or.kr"
+        },
+        {
+          "id": "factoryon",
+          "name": "팩토리온",
+          "type": "url",
+          "target": "https://www.factoryon.go.kr"
+        }
       ]
     },
     {
-      "id": "folders",
-      "name": "폴더",
-      "icon": "folder",
+      "id": "admin",
+      "name": "행정·법령",
+      "icon": "landmark",
       "color": "#34B89A",
       "items": [
-        { "id": "downloads", "name": "다운로드", "type": "folder", "target": "%DOWNLOADS%" },
-        { "id": "desktop", "name": "바탕화면", "type": "folder", "target": "%DESKTOP%" },
-        { "id": "documents", "name": "문서", "type": "folder", "target": "%DOCUMENTS%" }
+        {
+          "id": "moleg",
+          "name": "법제처",
+          "type": "url",
+          "target": "https://www.moleg.go.kr"
+        },
+        {
+          "id": "law",
+          "name": "국가법령정보센터",
+          "type": "url",
+          "target": "https://www.law.go.kr"
+        },
+        {
+          "id": "elis",
+          "name": "자치법규정보시스템",
+          "type": "url",
+          "target": "https://www.elis.go.kr"
+        },
+        {
+          "id": "gwanbo",
+          "name": "전자관보",
+          "type": "url",
+          "target": "https://gwanbo.go.kr"
+        },
+        {
+          "id": "eum",
+          "name": "토지이음",
+          "type": "url",
+          "target": "https://www.eum.go.kr"
+        },
+        {
+          "id": "vworld",
+          "name": "브이월드",
+          "type": "url",
+          "target": "https://www.vworld.kr"
+        },
+        {
+          "id": "rt",
+          "name": "국토부 실거래가 공개시스템",
+          "type": "url",
+          "target": "https://rt.molit.go.kr"
+        },
+        {
+          "id": "iros",
+          "name": "인터넷등기소",
+          "type": "url",
+          "target": "https://www.iros.go.kr"
+        },
+        {
+          "id": "gov24",
+          "name": "정부24",
+          "type": "url",
+          "target": "https://www.gov.kr"
+        },
+        {
+          "id": "g2b",
+          "name": "나라장터",
+          "type": "url",
+          "target": "https://www.g2b.go.kr"
+        },
+        {
+          "id": "kosis",
+          "name": "국가통계포털",
+          "type": "url",
+          "target": "https://kosis.kr"
+        },
+        {
+          "id": "molit",
+          "name": "국토교통부",
+          "type": "url",
+          "target": "https://www.molit.go.kr"
+        },
+        {
+          "id": "motie",
+          "name": "산업통상부",
+          "type": "url",
+          "target": "https://www.motie.go.kr"
+        }
+      ]
+    },
+    {
+      "id": "trip",
+      "name": "출장",
+      "icon": "train-front",
+      "color": "#E5667A",
+      "items": [
+        {
+          "id": "kakaomap",
+          "name": "카카오맵",
+          "type": "url",
+          "target": "https://map.kakao.com"
+        },
+        {
+          "id": "korail",
+          "name": "코레일",
+          "type": "url",
+          "target": "https://www.letskorail.com"
+        },
+        {
+          "id": "opinet",
+          "name": "오피넷 (유가 정보)",
+          "type": "url",
+          "target": "https://www.opinet.co.kr"
+        },
+        {
+          "id": "tmoney",
+          "name": "티머니 고속·시외버스",
+          "type": "url",
+          "target": "https://txbus.t-money.co.kr/"
+        }
       ]
     },
     {
@@ -54,20 +189,131 @@
       "icon": "sparkles",
       "color": "#9C7CF0",
       "items": [
-        { "id": "memo", "name": "빠른 메모", "type": "tool", "target": "memo" },
-        { "id": "datecalc", "name": "날짜 계산", "type": "tool", "target": "datecalc" },
-        { "id": "timer", "name": "타이머·알람", "type": "tool", "target": "timer" },
-        { "id": "textclean", "name": "텍스트 정리", "type": "tool", "target": "textclean" },
-        { "id": "cliphistory", "name": "클립보드 기록", "type": "tool", "target": "cliphistory" },
-        { "id": "speller", "name": "맞춤법 검사", "type": "url", "target": "https://nara-speller.co.kr/speller/", "icon": "builtin:spell-check" },
-        { "id": "papago", "name": "번역 (파파고)", "type": "url", "target": "https://papago.naver.com", "icon": "builtin:languages" }
+        {
+          "id": "memo",
+          "name": "빠른 메모",
+          "type": "tool",
+          "target": "memo"
+        },
+        {
+          "id": "datecalc",
+          "name": "날짜 계산",
+          "type": "tool",
+          "target": "datecalc"
+        },
+        {
+          "id": "unitconv",
+          "name": "단위 환산",
+          "type": "tool",
+          "target": "unitconv"
+        },
+        {
+          "id": "krmoney",
+          "name": "금액 한글 표기",
+          "type": "tool",
+          "target": "krmoney"
+        },
+        {
+          "id": "textclean",
+          "name": "텍스트 정리",
+          "type": "tool",
+          "target": "textclean"
+        },
+        {
+          "id": "cliphistory",
+          "name": "클립보드 기록",
+          "type": "tool",
+          "target": "cliphistory"
+        },
+        {
+          "id": "timer",
+          "name": "타이머·알람",
+          "type": "tool",
+          "target": "timer"
+        },
+        {
+          "id": "notepad",
+          "name": "메모장",
+          "type": "app",
+          "target": "notepad.exe"
+        },
+        {
+          "id": "calc",
+          "name": "계산기",
+          "type": "app",
+          "target": "calc.exe"
+        },
+        {
+          "id": "snip",
+          "name": "화면 캡처",
+          "type": "app",
+          "target": "ms-screenclip:"
+        },
+        {
+          "id": "paint",
+          "name": "그림판",
+          "type": "app",
+          "target": "mspaint.exe"
+        },
+        {
+          "id": "explorer",
+          "name": "파일 탐색기",
+          "type": "app",
+          "target": "explorer.exe"
+        },
+        {
+          "id": "taskmgr",
+          "name": "작업 관리자",
+          "type": "app",
+          "target": "taskmgr.exe"
+        },
+        {
+          "id": "speller",
+          "name": "맞춤법 검사",
+          "type": "url",
+          "target": "https://nara-speller.co.kr/speller/",
+          "icon": "builtin:spell-check"
+        },
+        {
+          "id": "papago",
+          "name": "번역 (파파고)",
+          "type": "url",
+          "target": "https://papago.naver.com",
+          "icon": "builtin:languages"
+        }
       ]
     }
   ],
   "holidays": [
-    "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-03-02", "2026-05-05", "2026-05-25",
-    "2026-06-03", "2026-08-17", "2026-09-24", "2026-09-25", "2026-09-26", "2026-10-05", "2026-10-09", "2026-12-25",
-    "2027-01-01", "2027-02-05", "2027-02-06", "2027-02-07", "2027-02-08", "2027-03-01", "2027-05-05", "2027-05-13",
-    "2027-08-16", "2027-09-14", "2027-09-15", "2027-09-16", "2027-10-04", "2027-10-11", "2027-12-27"
+    "2026-01-01",
+    "2026-02-16",
+    "2026-02-17",
+    "2026-02-18",
+    "2026-03-02",
+    "2026-05-05",
+    "2026-05-25",
+    "2026-06-03",
+    "2026-08-17",
+    "2026-09-24",
+    "2026-09-25",
+    "2026-09-26",
+    "2026-10-05",
+    "2026-10-09",
+    "2026-12-25",
+    "2027-01-01",
+    "2027-02-05",
+    "2027-02-06",
+    "2027-02-07",
+    "2027-02-08",
+    "2027-03-01",
+    "2027-05-05",
+    "2027-05-13",
+    "2027-08-16",
+    "2027-09-14",
+    "2027-09-15",
+    "2027-09-16",
+    "2027-10-04",
+    "2027-10-11",
+    "2027-12-27"
   ]
 }
