@@ -47,9 +47,22 @@ function loadConfig() {
 // (투명도·녹색 불빛·공휴일 설정은 그대로 둔다)
 function migrateConfig(cfg) {
   const def = readDefaultConfig();
-  if ((cfg.version || 1) >= def.version) return cfg;
-  fs.copyFileSync(CONFIG_FILE(), userFile(`config.v${cfg.version || 1}-backup.json`));
-  const next = { ...cfg, version: def.version, categories: def.categories };
+  const from = cfg.version || 1;
+  if (from >= def.version) return cfg;
+  fs.copyFileSync(CONFIG_FILE(), userFile(`config.v${from}-backup.json`));
+  let next = { ...cfg, version: def.version };
+  if (from < 2) {
+    // v2: 메뉴 구성 전체 변경
+    next.categories = def.categories;
+  } else {
+    // v3 이후: 사용자가 고친 메뉴는 그대로 두고, 아이콘을 직접 지정하지 않은 항목에만 새 기본 아이콘을 채운다.
+    const defIcons = new Map();
+    def.categories.forEach((c) => c.items.forEach((it) => { if (it.icon) defIcons.set(it.id, it.icon); }));
+    next.categories = cfg.categories.map((c) => ({
+      ...c,
+      items: c.items.map((it) => (!it.icon && defIcons.has(it.id) ? { ...it, icon: defIcons.get(it.id) } : it)),
+    }));
+  }
   writeConfig(next);
   return next;
 }

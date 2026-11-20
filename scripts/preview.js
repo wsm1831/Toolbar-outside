@@ -36,7 +36,7 @@ const mock = (cfg) => {
   await page.hover('#dock');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${out}/2-hover.png` });
-  for (const [i, id] of [['3', 'admin'], ['4', 'utils']]) {
+  for (const [i, id] of [['3', 'ind'], ['4', 'utils']]) {
     await page.click(`#cats [data-id="${id}"]`);
     await page.waitForTimeout(700);
     await page.screenshot({ path: `${out}/${i}-${id}.png` });

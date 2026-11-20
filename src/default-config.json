@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "appearance": {
     "idleOpacity": 0.35,
     "tileSize": 52
@@ -55,7 +55,8 @@
           "id": "industryland",
           "name": "산업입지정보시스템",
           "type": "url",
-          "target": "https://www.industryland.or.kr"
+          "target": "https://www.industryland.or.kr",
+          "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjUgNCA2MCA1MCI+CiAgPGcgZmlsbD0iIzZENkY3MiI+CiAgICA8cmVjdCB4PSIxMC4yIiB5PSIxNS40IiB3aWR0aD0iOC40IiBoZWlnaHQ9IjIxLjIiIHJ4PSIwLjYiLz4KICAgIDxwYXRoIGQ9Ik0yMyAxNi4yaDguNFYzNC44SDM0LjZWNDNIMjkuMkMyNS43IDQzIDIzIDQwLjMgMjMgMzYuOFoiLz4KICAgIDxwYXRoIGQ9Ik02Mi42IDE1LjZWMjIuNkg1Ny40QzU2LjIgMjIuNiA1NS42IDIzLjYgNTYuMyAyNC42TDYxLjIgMzEuMkM2NC4yIDM1LjQgNjEuNCA0MyA1NS44IDQzSDQ5LjRWMzUuNkg1NC40QzU1LjYgMzUuNiA1Ni4yIDM0LjUgNTUuNCAzMy41TDUwLjggMjcuMkM0Ny42IDIyLjggNTAuNiAxNS42IDU2LjQgMTUuNloiLz4KICA8L2c+CiAgPHJlY3QgeD0iMzcuMiIgeT0iMjIiIHdpZHRoPSI4IiBoZWlnaHQ9IjIxIiBmaWxsPSIjMDA3RkNEIi8+CiAgPGNpcmNsZSBjeD0iMTQiIGN5PSI0NS42IiByPSI0LjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzc3QTkyRSIgc3Ryb2tlLXdpZHRoPSI1LjIiLz4KICA8Y2lyY2xlIGN4PSI0MC45IiBjeT0iMTMuOSIgcj0iNC40IiBmaWxsPSJub25lIiBzdHJva2U9IiNGNTg4MUMiIHN0cm9rZS13aWR0aD0iNS4yIi8+Cjwvc3ZnPgo="
         },
         {
           "id": "factoryon",
