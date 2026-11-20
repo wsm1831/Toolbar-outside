@@ -55,7 +55,8 @@
       const half = tip.offsetWidth / 2;
       if (cx + half > pr.left && cx - half < pr.right) top = Math.min(top, pr.top);
     }
-    tip.style.left = `${cx}px`;
+    const half = tip.offsetWidth / 2; // 화면 가장자리 밖으로 나가지 않게
+    tip.style.left = `${Math.max(half + 8, Math.min(window.innerWidth - half - 8, cx))}px`;
     tip.style.top = `${top - 4}px`;
   }
   function hideTip() { tip.hidden = true; }
