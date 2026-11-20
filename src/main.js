@@ -376,8 +376,8 @@ function registerIpc() {
   ipcMain.handle('config:get', () => config);
   ipcMain.handle('config:default', () => readDefaultConfig());
   ipcMain.handle('config:save', (e, cfg) => {
+    const before = JSON.stringify(weatherCfg()); // 바꾸기 전 날씨 설정
     config = cfg;
-    const before = JSON.stringify(weatherCfg());
     writeConfig(cfg);
     applyAwake();
     if (JSON.stringify(weatherCfg()) !== before) refreshWeather();

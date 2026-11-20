@@ -82,7 +82,29 @@ body.awake #dock { opacity: 1; }
 .tile img { width: 68%; height: 68%; object-fit: contain; pointer-events: none; }
 .tile svg { pointer-events: none; }
 
-.tile-cat { background: var(--c); }
+.tile-cat { background: var(--c); overflow: hidden; }
+.tile-cat .cat-ic,
+.tile-cat .cat-name {
+  grid-area: 1 / 1;
+  transition: opacity 0.18s ease, transform 0.22s var(--spring);
+}
+.tile-cat .cat-ic { display: grid; }
+.tile-cat .cat-name {
+  max-width: calc(var(--tile) - 6px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-align: center;
+  word-break: keep-all;
+  color: #fff;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+}
+.tile-cat:hover .cat-ic,
+.tile-cat:focus-visible .cat-ic { opacity: 0; transform: translateY(-10px) scale(0.7); }
+.tile-cat:hover .cat-name,
+.tile-cat:focus-visible .cat-name { opacity: 1; transform: none; }
 .tile-cat.active { transform: translateY(-5px); }
 .tile-cat.active::after {
   content: "";

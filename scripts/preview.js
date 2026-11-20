@@ -36,6 +36,9 @@ const mock = (cfg) => {
   await page.addStyleTag({ content: 'html{background:linear-gradient(160deg,#6d8fb5,#c9d6e3 55%,#e9e4d8)}' });
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${out}/1-idle.png` });
+  await page.hover('#cats [data-id="admin"]');
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${out}/2b-cathover.png` });
   await page.hover('#weather');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${out}/2-hover.png` });

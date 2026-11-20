@@ -143,12 +143,16 @@
       const b = document.createElement('button');
       b.className = 'tile tile-cat';
       b.style.setProperty('--c', cat.color || '#5B6B8C');
-      b.dataset.tip = cat.name;
       b.dataset.id = cat.id;
       b.setAttribute('role', 'tab');
       b.setAttribute('aria-label', cat.name);
       b.setAttribute('aria-expanded', 'false');
-      b.innerHTML = window.icon(cat.icon || 'layout-grid', 26);
+      // 마우스를 올리면 아이콘이 사라지고 그 자리에 이름이 올라온다 (이름 풍선 대신)
+      b.innerHTML = `<span class="cat-ic">${window.icon(cat.icon || 'layout-grid', 26)}</span><span class="cat-name"></span>`;
+      const nm = b.querySelector('.cat-name');
+      nm.textContent = cat.name;
+      const len = [...cat.name].length;
+      nm.style.fontSize = `${len <= 3 ? 13 : len === 4 ? 12 : len === 5 ? 10.5 : 9.5}px`;
       b.addEventListener('click', () => toggleCategory(cat.id));
       cats.appendChild(b);
     }
