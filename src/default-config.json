@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "appearance": {
+    "idleOpacity": 0.35,
+    "tileSize": 52
+  },
+  "awake": {
+    "enabled": true,
+    "quiet": { "on": true, "start": "11:30", "end": "13:00" }
+  },
+  "categories": [
+    {
+      "id": "web",
+      "name": "홈페이지",
+      "icon": "globe",
+      "color": "#4C9BEF",
+      "items": [
+        { "id": "naver", "name": "네이버", "type": "url", "target": "https://www.naver.com" },
+        { "id": "law", "name": "국가법령정보센터", "type": "url", "target": "https://www.law.go.kr" },
+        { "id": "g2b", "name": "나라장터", "type": "url", "target": "https://www.g2b.go.kr" },
+        { "id": "alio", "name": "알리오", "type": "url", "target": "https://www.alio.go.kr" },
+        { "id": "datagokr", "name": "공공데이터포털", "type": "url", "target": "https://www.data.go.kr" },
+        { "id": "gov24", "name": "정부24", "type": "url", "target": "https://www.gov.kr" }
+      ]
+    },
+    {
+      "id": "apps",
+      "name": "작업도구",
+      "icon": "wrench",
+      "color": "#E9A23B",
+      "items": [
+        { "id": "notepad", "name": "메모장", "type": "app", "target": "notepad.exe" },
+        { "id": "calc", "name": "계산기", "type": "app", "target": "calc.exe" },
+        { "id": "snip", "name": "화면 캡처", "type": "app", "target": "ms-screenclip:" },
+        { "id": "paint", "name": "그림판", "type": "app", "target": "mspaint.exe" },
+        { "id": "explorer", "name": "파일 탐색기", "type": "app", "target": "explorer.exe" },
+        { "id": "taskmgr", "name": "작업 관리자", "type": "app", "target": "taskmgr.exe" }
+      ]
+    },
+    {
+      "id": "folders",
+      "name": "폴더",
+      "icon": "folder",
+      "color": "#34B89A",
+      "items": [
+        { "id": "downloads", "name": "다운로드", "type": "folder", "target": "%DOWNLOADS%" },
+        { "id": "desktop", "name": "바탕화면", "type": "folder", "target": "%DESKTOP%" },
+        { "id": "documents", "name": "문서", "type": "folder", "target": "%DOCUMENTS%" }
+      ]
+    },
+    {
+      "id": "utils",
+      "name": "유틸리티",
+      "icon": "sparkles",
+      "color": "#9C7CF0",
+      "items": [
+        { "id": "memo", "name": "빠른 메모", "type": "tool", "target": "memo" },
+        { "id": "datecalc", "name": "날짜 계산", "type": "tool", "target": "datecalc" },
+        { "id": "timer", "name": "타이머·알람", "type": "tool", "target": "timer" },
+        { "id": "textclean", "name": "텍스트 정리", "type": "tool", "target": "textclean" },
+        { "id": "cliphistory", "name": "클립보드 기록", "type": "tool", "target": "cliphistory" },
+        { "id": "speller", "name": "맞춤법 검사", "type": "url", "target": "https://nara-speller.co.kr/speller/", "icon": "builtin:spell-check" },
+        { "id": "papago", "name": "번역 (파파고)", "type": "url", "target": "https://papago.naver.com", "icon": "builtin:languages" }
+      ]
+    }
+  ],
+  "holidays": [
+    "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-03-02", "2026-05-05", "2026-05-25",
+    "2026-06-03", "2026-08-17", "2026-09-24", "2026-09-25", "2026-09-26", "2026-10-05", "2026-10-09", "2026-12-25",
+    "2027-01-01", "2027-02-05", "2027-02-06", "2027-02-07", "2027-02-08", "2027-03-01", "2027-05-05", "2027-05-13",
+    "2027-08-16", "2027-09-14", "2027-09-15", "2027-09-16", "2027-10-04", "2027-10-11", "2027-12-27"
+  ]
+}

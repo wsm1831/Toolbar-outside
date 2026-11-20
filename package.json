@@ -1,0 +1,46 @@
+{
+  "name": "toolbar-outside",
+  "productName": "WorkToolbar",
+  "version": "0.1.0",
+  "description": "화면 아래에 떠 있는 업무용 바로가기 독 (Windows)",
+  "main": "src/main.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "icons": "node scripts/build-icons.js",
+    "preview": "node scripts/preview.js preview-out",
+    "dist": "electron-builder --win portable --x64"
+  },
+  "build": {
+    "appId": "kr.toolbar.outside",
+    "productName": "WorkToolbar",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "portable": {
+      "artifactName": "WorkToolbar-${version}-portable.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "lucide-static": "^1.77.0"
+  }
+}

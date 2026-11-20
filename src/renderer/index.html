@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>업무 툴바</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="stage">
+    <div id="pop" class="hit" hidden></div>
+    <nav id="dock" class="hit" aria-label="업무 툴바">
+      <div id="cats" role="tablist"></div>
+      <div class="sep" aria-hidden="true"></div>
+      <div id="clock" aria-live="off">
+        <span id="timer-badge" hidden></span>
+        <span id="clock-time"></span>
+        <span id="clock-date"></span>
+      </div>
+      <button id="btn-settings" class="tile tile-neutral" data-tip="설정" aria-label="설정"></button>
+      <button id="btn-awake" class="tile tile-awake" aria-pressed="false" aria-label="화면 보호기 차단"><span class="lamp"></span></button>
+    </nav>
+  </div>
+  <div id="tip" role="tooltip" hidden></div>
+  <div id="toast" role="status" hidden></div>
+  <script src="../shared/icons.js"></script>
+  <script src="tools.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

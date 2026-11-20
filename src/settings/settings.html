@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>업무 툴바 설정</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <aside class="side">
+    <h1>메뉴</h1>
+    <ul id="cat-list"></ul>
+    <button id="add-cat" class="link-btn">카테고리 추가</button>
+    <hr>
+    <ul>
+      <li><button id="nav-general" class="nav">일반 설정</button></li>
+    </ul>
+  </aside>
+
+  <main>
+    <section id="view-cat" hidden>
+      <div class="cat-head">
+        <input id="cat-name" class="title-input" aria-label="카테고리 이름">
+        <div class="head-actions">
+          <button id="cat-up" class="ghost" aria-label="위로">위로</button>
+          <button id="cat-down" class="ghost" aria-label="아래로">아래로</button>
+          <button id="cat-del" class="ghost danger">카테고리 삭제</button>
+        </div>
+      </div>
+      <div class="cat-style">
+        <div>
+          <span class="lbl">아이콘</span>
+          <div id="cat-icons" class="icon-grid"></div>
+        </div>
+        <div>
+          <span class="lbl">색</span>
+          <div id="cat-colors" class="swatches"></div>
+        </div>
+      </div>
+
+      <h2>메뉴 항목</h2>
+      <p class="hint">아이콘을 누르면 직접 고른 이미지로 바꿀 수 있습니다. 홈페이지는 사이트 아이콘을, 프로그램은 실행 파일 아이콘을 자동으로 씁니다.</p>
+      <ol id="items"></ol>
+      <button id="add-item" class="link-btn">항목 추가</button>
+    </section>
+
+    <section id="view-general" hidden>
+      <h2>모양</h2>
+      <label class="line">
+        <span>평소 투명도</span>
+        <input id="opacity" type="range" min="0.1" max="1" step="0.05">
+        <output id="opacity-out"></output>
+      </label>
+      <p class="hint">마우스를 툴바에 올리면 또렷해지고, 떼면 이 투명도로 돌아갑니다.</p>
+
+      <h2>화면 보호기 차단 (녹색 불빛)</h2>
+      <label class="line check"><input id="quiet-on" type="checkbox"> 매일 소등 시간에는 자동으로 끄기</label>
+      <div class="line">
+        <span>소등 시간</span>
+        <input id="quiet-start" type="time"> ~ <input id="quiet-end" type="time">
+      </div>
+      <p class="hint">소등 시간 동안 화면 보호기 차단 기능이 꺼집니다. 소등 시간 중에 불빛을 직접 누르면 그 시간 동안은 켜진 채로 유지됩니다.</p>
+
+      <h2>실행</h2>
+      <label class="line check"><input id="login" type="checkbox"> Windows를 켤 때 자동으로 실행</label>
+
+      <h2>공휴일</h2>
+      <p class="hint">날짜 계산(영업일)에 쓰입니다. 한 줄에 하나씩 2026-05-05 형식으로 적으세요. 2027년은 미리 넣어 둔 값이라 확인이 필요합니다.</p>
+      <textarea id="holidays" rows="8" spellcheck="false"></textarea>
+
+      <h2>설정 파일</h2>
+      <div class="line">
+        <button id="open-folder" class="ghost">설정 폴더 열기</button>
+        <button id="reset" class="ghost danger">기본값으로 되돌리기</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span id="dirty" class="hint"></span>
+    <button id="save" class="primary">저장</button>
+  </footer>
+
+  <script src="../shared/icons.js"></script>
+  <script src="../renderer/tools.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

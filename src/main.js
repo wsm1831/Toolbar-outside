@@ -1,0 +1,430 @@
+// 업무 툴바 - Electron 메인 프로세스
+// 화면 아래(작업 표시줄 바로 위)에 투명한 창을 띄우고, 독(dock) 영역 위에서만 마우스를 받는다.
+const {
+  app, BrowserWindow, ipcMain, screen, shell, clipboard, Tray, Menu,
+  nativeImage, Notification, dialog, net, powerSaveBlocker,
+} = require('electron');
+const path = require('path');
+const fs = require('fs');
+const { spawn } = require('child_process');
+
+const WINDOW_HEIGHT = 600; // 독 + 튀어오르는 메뉴/패널이 들어갈 높이
+const ICON_PATH = path.join(__dirname, 'assets', 'icon.png');
+
+let dockWin = null;
+let settingsWin = null;
+let tray = null;
+let config = null;
+const clipHistory = [];
+
+// ---------- 설정 파일 ----------
+const userFile = (name) => path.join(app.getPath('userData'), name);
+const CONFIG_FILE = () => userFile('config.json');
+
+function readDefaultConfig() {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, 'default-config.json'), 'utf8'));
+}
+
+function loadConfig() {
+  const file = CONFIG_FILE();
+  if (fs.existsSync(file)) {
+    try {
+      return JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (err) {
+      // 깨진 설정 파일은 지우지 않고 옆에 보관한 뒤 기본값으로 시작한다.
+      const backup = userFile(`config.broken-${Date.now()}.json`);
+      fs.renameSync(file, backup);
+      dialog.showErrorBox('설정 파일 오류', `설정 파일을 읽지 못해 기본 설정으로 시작합니다.\n기존 파일: ${backup}`);
+    }
+  }
+  const def = readDefaultConfig();
+  writeConfig(def);
+  return def;
+}
+
+function writeConfig(cfg) {
+  fs.mkdirSync(path.dirname(CONFIG_FILE()), { recursive: true });
+  fs.writeFileSync(CONFIG_FILE(), JSON.stringify(cfg, null, 2), 'utf8');
+}
+
+// %DOWNLOADS% 같은 특수 경로와 %USERPROFILE% 같은 환경 변수를 실제 경로로 바꾼다.
+function resolveTarget(target) {
+  const special = {
+    DOWNLOADS: app.getPath('downloads'),
+    DESKTOP: app.getPath('desktop'),
+    DOCUMENTS: app.getPath('documents'),
+    PICTURES: app.getPath('pictures'),
+    HOME: app.getPath('home'),
+  };
+  return String(target || '').replace(/%([A-Z_]+)%/gi, (m, key) => {
+    const up = key.toUpperCase();
+    if (special[up]) return special[up];
+    if (process.env[key] !== undefined) return process.env[key];
+    return m;
+  });
+}
+
+// 'notepad.exe'처럼 이름만 있는 실행 파일을 System32 등에서 찾아 전체 경로로 만든다 (아이콘 추출용).
+function findExecutable(target) {
+  if (path.isAbsolute(target)) return target;
+  const dirs = [
+    path.join(process.env.SystemRoot || 'C:\\Windows', 'System32'),
+    process.env.SystemRoot || 'C:\\Windows',
+    ...(process.env.PATH || '').split(path.delimiter),
+  ];
+  for (const d of dirs) {
+    const p = path.join(d, target);
+    if (d && fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
+// 'ms-screenclip:' 같은 프로토콜 주소인지 (드라이브 문자 'C:\\' 는 제외)
+const isProtocol = (t) => /^[a-z][a-z0-9+.-]+:/i.test(t);
+
+// ---------- 창 ----------
+function placeDock() {
+  if (!dockWin) return;
+  const { workArea } = screen.getPrimaryDisplay();
+  dockWin.setBounds({
+    x: workArea.x,
+    y: workArea.y + workArea.height - WINDOW_HEIGHT,
+    width: workArea.width,
+    height: WINDOW_HEIGHT,
+  });
+}
+
+function createDock() {
+  dockWin = new BrowserWindow({
+    width: 1200,
+    height: WINDOW_HEIGHT,
+    show: false,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    skipTaskbar: true,
+    hasShadow: false,
+    alwaysOnTop: true,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  dockWin.setAlwaysOnTop(true, 'pop-up-menu');
+  dockWin.setIgnoreMouseEvents(true, { forward: true });
+  placeDock();
+  dockWin.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  dockWin.once('ready-to-show', () => dockWin.showInactive());
+  dockWin.on('blur', () => dockWin.webContents.send('dock:blur'));
+  // 다른 창이 '항상 위'를 가져가도 다시 맨 위로
+  setInterval(() => {
+    if (dockWin && !dockWin.isDestroyed() && dockWin.isVisible()) dockWin.moveTop();
+  }, 5000);
+}
+
+function openSettings() {
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.show();
+    settingsWin.focus();
+    return;
+  }
+  settingsWin = new BrowserWindow({
+    width: 860,
+    height: 640,
+    minWidth: 720,
+    minHeight: 520,
+    title: '업무 툴바 설정',
+    icon: ICON_PATH,
+    autoHideMenuBar: true,
+    backgroundColor: '#F3F5F9',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  settingsWin.loadFile(path.join(__dirname, 'settings', 'settings.html'));
+}
+
+function createTray() {
+  const img = nativeImage.createFromPath(ICON_PATH).resize({ width: 16, height: 16 });
+  tray = new Tray(img);
+  tray.setToolTip('업무 툴바');
+  const menu = Menu.buildFromTemplate([
+    { label: '툴바 보이기/숨기기', click: toggleDock },
+    { label: '설정', click: openSettings },
+    { type: 'separator' },
+    { label: '종료', click: () => app.quit() },
+  ]);
+  tray.setContextMenu(menu);
+  tray.on('click', toggleDock);
+}
+
+function toggleDock() {
+  if (!dockWin) return;
+  if (dockWin.isVisible()) dockWin.hide();
+  else dockWin.showInactive();
+}
+
+// ---------- 클립보드 기록 (메모리에만 보관, 파일로 저장하지 않음) ----------
+function watchClipboard() {
+  let last = clipboard.readText();
+  setInterval(() => {
+    const text = clipboard.readText();
+    if (!text || text === last) return;
+    last = text;
+    const i = clipHistory.indexOf(text);
+    if (i >= 0) clipHistory.splice(i, 1);
+    clipHistory.unshift(text);
+    if (clipHistory.length > 30) clipHistory.pop();
+  }, 1000);
+}
+
+// ---------- 사이트 아이콘 (홈페이지에서 가장 큰 아이콘을 찾아 캐시) ----------
+const ICON_CACHE_FILE = () => userFile('icon-cache.json');
+let iconCache = null;
+function getIconCache() {
+  if (iconCache) return iconCache;
+  try { iconCache = JSON.parse(fs.readFileSync(ICON_CACHE_FILE(), 'utf8')); } catch { iconCache = {}; }
+  return iconCache;
+}
+
+async function fetchWithTimeout(url, ms = 6000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try { return await net.fetch(url, { signal: ctrl.signal }); } finally { clearTimeout(t); }
+}
+
+async function findSiteIcon(pageUrl) {
+  const candidates = [];
+  try {
+    const res = await fetchWithTimeout(pageUrl);
+    const html = (await res.text()).slice(0, 200000);
+    const base = res.url || pageUrl;
+    const linkRe = /<link\b[^>]*>/gi;
+    let m;
+    while ((m = linkRe.exec(html))) {
+      const tag = m[0];
+      const rel = (tag.match(/rel\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
+      const href = (tag.match(/href\s*=\s*["']([^"']+)["']/i) || [])[1];
+      if (!href || !/icon/i.test(rel)) continue;
+      const sizes = (tag.match(/sizes\s*=\s*["'](\d+)x\d+["']/i) || [])[1];
+      let score = sizes ? Number(sizes) : 16;
+      if (/apple-touch-icon/i.test(rel)) score = Math.max(score, 180);
+      if (/\.svg(\?|$)/i.test(href)) score = 150;
+      try { candidates.push({ url: new URL(href, base).href, score }); } catch { /* 잘못된 주소 무시 */ }
+    }
+    candidates.push({ url: new URL('/apple-touch-icon.png', base).href, score: 100 });
+    candidates.push({ url: new URL('/favicon.ico', base).href, score: 10 });
+  } catch {
+    try { candidates.push({ url: new URL('/favicon.ico', pageUrl).href, score: 10 }); } catch { return null; }
+  }
+  candidates.sort((a, b) => b.score - a.score);
+  for (const c of candidates) {
+    try {
+      const r = await fetchWithTimeout(c.url);
+      if (!r.ok) continue;
+      const type = (r.headers.get('content-type') || '').split(';')[0].trim();
+      if (!/^image\//.test(type) && !/\.(ico|png|svg)(\?|$)/i.test(c.url)) continue;
+      const buf = Buffer.from(await r.arrayBuffer());
+      if (buf.length < 100 || buf.length > 500000) continue;
+      const mime = /^image\//.test(type) ? type : (c.url.match(/\.svg/i) ? 'image/svg+xml' : 'image/x-icon');
+      return `data:${mime};base64,${buf.toString('base64')}`;
+    } catch { /* 다음 후보 */ }
+  }
+  return null;
+}
+
+
+// ---------- 화면 보호기 차단 (녹색 불빛) ----------
+// Windows 공식 API(SetThreadExecutionState)를 쓰는 Electron powerSaveBlocker 사용.
+// 키 입력·마우스 이동을 흉내 내지 않는다.
+let blockerId = null;
+let awakeOverrideDay = null; // 소등 시간 중 직접 켠 날짜 (그 소등 시간 동안만 유지)
+
+function awakeCfg() {
+  if (!config.awake) config.awake = { enabled: true, quiet: { on: true, start: '11:30', end: '13:00' } };
+  return config.awake;
+}
+const toMin = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + (m || 0); };
+const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+
+function inQuietHours() {
+  const q = awakeCfg().quiet;
+  if (!q || !q.on) return false;
+  const now = new Date();
+  const n = now.getHours() * 60 + now.getMinutes();
+  const s = toMin(q.start); const e = toMin(q.end);
+  return s <= e ? n >= s && n < e : n >= s || n < e;
+}
+
+function awakeState() {
+  const a = awakeCfg();
+  const quiet = inQuietHours();
+  if (!quiet) awakeOverrideDay = null;
+  const on = a.enabled && (!quiet || awakeOverrideDay === todayKey());
+  return { on, enabled: a.enabled, quiet, quietText: a.quiet && a.quiet.on ? `${a.quiet.start}~${a.quiet.end}` : '' };
+}
+
+function applyAwake() {
+  const st = awakeState();
+  if (st.on && blockerId === null) blockerId = powerSaveBlocker.start('prevent-display-sleep');
+  if (!st.on && blockerId !== null) { powerSaveBlocker.stop(blockerId); blockerId = null; }
+  if (dockWin && !dockWin.isDestroyed()) dockWin.webContents.send('awake:state', st);
+  return st;
+}
+
+function toggleAwake() {
+  const a = awakeCfg();
+  const st = awakeState();
+  if (st.on) { a.enabled = false; awakeOverrideDay = null; }
+  else { a.enabled = true; if (st.quiet) awakeOverrideDay = todayKey(); }
+  writeConfig(config);
+  return applyAwake();
+}
+
+// ---------- IPC ----------
+function registerIpc() {
+  ipcMain.handle('config:get', () => config);
+  ipcMain.handle('config:default', () => readDefaultConfig());
+  ipcMain.handle('config:save', (e, cfg) => {
+    config = cfg;
+    writeConfig(cfg);
+    applyAwake();
+    if (dockWin) dockWin.webContents.send('config:changed', cfg);
+    return true;
+  });
+  ipcMain.handle('config:openFolder', () => shell.openPath(app.getPath('userData')));
+
+  ipcMain.on('dock:ignoreMouse', (e, ignore) => {
+    if (!dockWin) return;
+    if (ignore) dockWin.setIgnoreMouseEvents(true, { forward: true });
+    else dockWin.setIgnoreMouseEvents(false);
+  });
+  ipcMain.on('dock:focus', () => dockWin && dockWin.focus());
+
+  ipcMain.handle('item:open', async (e, item) => {
+    try {
+      const target = resolveTarget(item.target).trim();
+      if (!target) throw new Error('대상이 비어 있습니다.');
+      if (item.type === 'url') {
+        if (!/^https?:\/\//i.test(target)) throw new Error('http:// 또는 https:// 로 시작하는 주소만 열 수 있습니다.');
+        await shell.openExternal(target);
+      } else if (item.type === 'folder') {
+        const err = await shell.openPath(target);
+        if (err) throw new Error(err);
+      } else if (item.type === 'app') {
+        if (isProtocol(target)) {
+          await shell.openExternal(target);
+        } else if (/\.exe$/i.test(target)) {
+          const exe = findExecutable(target) || target;
+          await new Promise((resolve, reject) => {
+            const child = spawn(exe, item.args || [], { detached: true, stdio: 'ignore', cwd: path.isAbsolute(exe) ? path.dirname(exe) : undefined });
+            child.once('error', reject);
+            child.once('spawn', () => { child.unref(); resolve(); });
+          });
+        } else {
+          const err = await shell.openPath(target); // 바로가기(.lnk), 문서 파일 등
+          if (err) throw new Error(err);
+        }
+      }
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, message: err.message || String(err) };
+    }
+  });
+
+  ipcMain.handle('icon:file', async (e, target) => {
+    try {
+      const resolved = resolveTarget(target);
+      if (isProtocol(resolved)) return null;
+      const full = findExecutable(resolved) || resolved;
+      if (!fs.existsSync(full)) return null;
+      const img = await app.getFileIcon(full, { size: 'large' });
+      return img.isEmpty() ? null : img.toDataURL();
+    } catch { return null; }
+  });
+
+  ipcMain.handle('icon:site', async (e, url, refresh) => {
+    const cache = getIconCache();
+    if (!refresh && url in cache) return cache[url];
+    const data = await findSiteIcon(url);
+    cache[url] = data;
+    fs.writeFile(ICON_CACHE_FILE(), JSON.stringify(cache), () => {});
+    return data;
+  });
+
+  ipcMain.handle('icon:pickImage', async () => {
+    const r = await dialog.showOpenDialog(settingsWin, {
+      title: '아이콘 이미지 선택',
+      filters: [{ name: '이미지', extensions: ['png', 'jpg', 'jpeg', 'svg', 'ico', 'webp'] }],
+      properties: ['openFile'],
+    });
+    if (r.canceled || !r.filePaths[0]) return null;
+    const file = r.filePaths[0];
+    const ext = path.extname(file).slice(1).toLowerCase();
+    const mime = { svg: 'image/svg+xml', jpg: 'image/jpeg', jpeg: 'image/jpeg', ico: 'image/x-icon', webp: 'image/webp' }[ext] || 'image/png';
+    return `data:${mime};base64,${fs.readFileSync(file).toString('base64')}`;
+  });
+
+  ipcMain.handle('dialog:pickPath', async (e, kind) => {
+    const r = await dialog.showOpenDialog(settingsWin, kind === 'folder'
+      ? { title: '폴더 선택', properties: ['openDirectory'] }
+      : { title: '프로그램 선택', properties: ['openFile'], filters: [{ name: '프로그램', extensions: ['exe', 'lnk', 'bat', 'cmd'] }, { name: '모든 파일', extensions: ['*'] }] });
+    return r.canceled ? null : r.filePaths[0];
+  });
+
+  ipcMain.handle('clipboard:read', () => clipboard.readText());
+  ipcMain.handle('clipboard:write', (e, text) => { clipboard.writeText(String(text)); return true; });
+  ipcMain.handle('clipboard:history', () => clipHistory.slice());
+  ipcMain.handle('clipboard:clearHistory', () => { clipHistory.length = 0; return true; });
+
+  ipcMain.handle('memo:load', () => {
+    try { return fs.readFileSync(userFile('memo.txt'), 'utf8'); } catch { return ''; }
+  });
+  ipcMain.handle('memo:save', (e, text) => { fs.writeFileSync(userFile('memo.txt'), String(text), 'utf8'); return true; });
+
+  ipcMain.on('notify', (e, title, body) => {
+    if (Notification.isSupported()) new Notification({ title, body, icon: ICON_PATH }).show();
+  });
+
+  ipcMain.handle('awake:get', () => awakeState());
+  ipcMain.handle('awake:toggle', () => toggleAwake());
+
+  ipcMain.on('settings:open', openSettings);
+  ipcMain.on('app:quit', () => app.quit());
+  ipcMain.on('dock:hide', () => dockWin && dockWin.hide());
+
+  const loginPath = () => process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+  ipcMain.handle('login:get', () => app.getLoginItemSettings({ path: loginPath() }).openAtLogin);
+  ipcMain.handle('login:set', (e, on) => {
+    app.setLoginItemSettings({ openAtLogin: !!on, path: loginPath() });
+    return app.getLoginItemSettings({ path: loginPath() }).openAtLogin;
+  });
+}
+
+// ---------- 시작 ----------
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => { if (dockWin) dockWin.showInactive(); });
+  app.setAppUserModelId('kr.toolbar.outside');
+  app.whenReady().then(() => {
+    config = loadConfig();
+    registerIpc();
+    createDock();
+    createTray();
+    watchClipboard();
+    applyAwake();
+    setInterval(applyAwake, 20000);
+    screen.on('display-metrics-changed', placeDock);
+    screen.on('display-added', placeDock);
+    screen.on('display-removed', placeDock);
+  });
+  app.on('window-all-closed', () => { /* 설정 창을 닫아도 툴바는 계속 실행 */ });
+}
