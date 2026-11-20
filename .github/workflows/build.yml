@@ -5,6 +5,9 @@ on:
     branches: ['**']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -16,8 +19,25 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx electron-builder --win portable --x64 --publish never
+      - name: 버전 읽기
+        id: ver
+        shell: bash
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
-          name: WorkToolbar-portable
+          name: WorkToolbar-${{ steps.ver.outputs.version }}
           path: dist/*.exe
           retention-days: 30
+      # 항상 같은 주소에서 최신판을 받을 수 있도록 'latest' 배포 페이지에 덮어쓴다.
+      - name: 최신판 배포 페이지에 올리기
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp dist/*.exe WorkToolbar-portable.exe
+          gh release view latest >/dev/null 2>&1 || \
+            gh release create latest --target "$GITHUB_SHA" --title "업무 툴바 최신판" \
+              --notes "항상 가장 최근에 만든 실행 파일입니다. WorkToolbar-portable.exe 를 받아 실행하세요."
+          gh release upload latest WorkToolbar-portable.exe --clobber
+          gh release edit latest --title "업무 툴바 최신판 (v${{ steps.ver.outputs.version }})" \
+            --notes "버전 v${{ steps.ver.outputs.version }} · 커밋 ${GITHUB_SHA::7}. WorkToolbar-portable.exe 를 받아 실행하세요. 이전 버전이 실행 중이면 트레이 아이콘에서 먼저 종료하세요."

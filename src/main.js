@@ -150,7 +150,7 @@ function openSettings() {
     height: 640,
     minWidth: 720,
     minHeight: 520,
-    title: '업무 툴바 설정',
+    title: `업무 툴바 설정 (v${app.getVersion()})`,
     icon: ICON_PATH,
     autoHideMenuBar: true,
     backgroundColor: '#F3F5F9',
@@ -160,13 +160,14 @@ function openSettings() {
       nodeIntegration: false,
     },
   });
+  settingsWin.on('page-title-updated', (e) => e.preventDefault()); // 창 제목에 버전 표시 유지
   settingsWin.loadFile(path.join(__dirname, 'settings', 'settings.html'));
 }
 
 function createTray() {
   const img = nativeImage.createFromPath(ICON_PATH).resize({ width: 16, height: 16 });
   tray = new Tray(img);
-  tray.setToolTip('업무 툴바');
+  tray.setToolTip(`업무 툴바 v${app.getVersion()}`);
   const menu = Menu.buildFromTemplate([
     { label: '툴바 보이기/숨기기', click: toggleDock },
     { label: '설정', click: openSettings },
@@ -421,10 +422,21 @@ function registerIpc() {
 }
 
 // ---------- 시작 ----------
-if (!app.requestSingleInstanceLock()) {
+// 이미 실행 중이면 새로 켠 쪽은 종료된다. 이때 버전이 다르면(새 버전을 받아 실행한 경우)
+// 기존 툴바가 스스로 꺼지고 새 버전을 대신 실행해 준다.
+const instanceInfo = { version: app.getVersion(), exe: process.env.PORTABLE_EXECUTABLE_FILE || process.execPath };
+if (!app.requestSingleInstanceLock(instanceInfo)) {
   app.quit();
 } else {
-  app.on('second-instance', () => { if (dockWin) dockWin.showInactive(); });
+  app.on('second-instance', (e, argv, cwd, other) => {
+    if (other && other.version && other.version !== app.getVersion() && other.exe && fs.existsSync(other.exe)) {
+      app.releaseSingleInstanceLock();
+      spawn(other.exe, [], { detached: true, stdio: 'ignore' }).unref();
+      app.quit();
+      return;
+    }
+    if (dockWin) dockWin.showInactive();
+  });
   app.setAppUserModelId('kr.toolbar.outside');
   app.whenReady().then(() => {
     config = loadConfig();
