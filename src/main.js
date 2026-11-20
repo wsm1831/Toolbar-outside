@@ -55,12 +55,18 @@ function migrateConfig(cfg) {
     // v2: 메뉴 구성 전체 변경
     next.categories = def.categories;
   } else {
-    // v3 이후: 사용자가 고친 메뉴는 그대로 두고, 아이콘을 직접 지정하지 않은 항목에만 새 기본 아이콘을 채운다.
-    const defIcons = new Map();
-    def.categories.forEach((c) => c.items.forEach((it) => { if (it.icon) defIcons.set(it.id, it.icon); }));
+    // v3 이후: 사용자가 고친 메뉴(이름·주소·순서)는 그대로 두고, 아이콘은 새 기본값으로 맞춘다.
+    // 단, 설정 창에서 직접 고른 아이콘(iconCustom)은 건드리지 않는다.
+    const defItems = new Map();
+    def.categories.forEach((c) => c.items.forEach((it) => defItems.set(it.id, it)));
     next.categories = cfg.categories.map((c) => ({
       ...c,
-      items: c.items.map((it) => (!it.icon && defIcons.has(it.id) ? { ...it, icon: defIcons.get(it.id) } : it)),
+      items: c.items.map((it) => {
+        const d = defItems.get(it.id);
+        if (!d || it.iconCustom) return it;
+        const { icon, iconScale, ...rest } = it;
+        return { ...rest, ...(d.icon ? { icon: d.icon } : {}), ...(d.iconScale ? { iconScale: d.iconScale } : {}) };
+      }),
     }));
   }
   writeConfig(next);

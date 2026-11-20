@@ -203,11 +203,11 @@
     renderIco();
     ico.addEventListener('click', async () => {
       if (item.icon && item.icon.startsWith('data:')) {
-        if (confirm('직접 고른 아이콘을 지우고 자동 아이콘으로 돌아갈까요?')) { delete item.icon; markDirty(); renderIco(); }
+        if (confirm('직접 고른 아이콘을 지우고 자동 아이콘으로 돌아갈까요?')) { delete item.icon; delete item.iconCustom; delete item.iconScale; markDirty(); renderIco(); }
         return;
       }
       const data = await api.pickImage();
-      if (data) { item.icon = data; markDirty(); renderIco(); }
+      if (data) { item.icon = data; item.iconCustom = true; markDirty(); renderIco(); }
     });
 
     // 키보드: Alt+↑/↓ 로도 순서 바꾸기
