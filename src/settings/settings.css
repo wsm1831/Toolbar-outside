@@ -128,7 +128,7 @@ h2 { font-size: 15px; margin: 24px 0 6px; }
 }
 .item .ico.paper { background: #F1F3F7; }
 .item .ico img { width: 64%; height: 64%; object-fit: contain; }
-.item input, .item select, .line input[type="time"], textarea {
+.item input, .item select, .line input[type="time"], .line select, textarea {
   padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: 7px;

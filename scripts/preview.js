@@ -20,7 +20,10 @@ const mock = (cfg) => {
     clipHistory: async () => ['2026년 산업단지 현황 보고', 'https://www.law.go.kr', '담당자 연락처 정리'],
     clearClipHistory: async () => true, loadMemo: async () => '오후 3시 회의 자료 확인', saveMemo: async () => true,
     getAwake: async () => awake, toggleAwake: async () => { awake = { ...awake, on: !awake.on, enabled: !awake.on }; return awake; },
-    onAwake: () => {}, notify: () => {}, openSettings: () => {}, quit: () => {}, getLogin: async () => false, setLogin: async (v) => v,
+    onAwake: () => {},
+    getWeather: async () => ({ city: '서울', temp: 12.4, code: 2, isDay: true, max: 15, min: 4 }),
+    weatherCities: async () => ['서울', '부산', '김천'], refreshWeather: async () => {}, onWeather: () => {},
+    setSettingsDirty: () => {}, onSaveRequest: () => {}, closeSettings: () => {}, notify: () => {}, openSettings: () => {}, quit: () => {}, getLogin: async () => false, setLogin: async (v) => v,
   };
 };
 
@@ -33,13 +36,16 @@ const mock = (cfg) => {
   await page.addStyleTag({ content: 'html{background:linear-gradient(160deg,#6d8fb5,#c9d6e3 55%,#e9e4d8)}' });
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${out}/1-idle.png` });
-  await page.hover('#dock');
+  await page.hover('#weather');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${out}/2-hover.png` });
-  for (const [i, id] of [['3', 'admin'], ['4', 'ind']]) {
+  for (const [i, id] of [['3', 'admin'], ['4', 'utils']]) {
     await page.click(`#cats [data-id="${id}"]`);
     await page.waitForTimeout(700);
     await page.screenshot({ path: `${out}/${i}-${id}.png` });
+    await page.hover('#pop .tile >> nth=1');
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${out}/${i}-${id}-tip.png` });
   }
   await page.click('#pop .tile >> nth=3'); // 금액 한글 표기
   await page.waitForTimeout(400);

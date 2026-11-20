@@ -145,6 +145,32 @@ body.awake #dock { opacity: 1; }
 }
 .mini-awake.paused .lamp { background: #A08A50; }
 
+/* ---------- 날씨 ---------- */
+.weather {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  height: var(--tile);
+  padding: 0 6px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  line-height: 1.15;
+  cursor: pointer;
+}
+.weather:hover { background: rgba(255, 255, 255, 0.07); }
+.weather:focus-visible { outline: 2px solid #fff; }
+.weather .w-top { display: flex; align-items: center; gap: 4px; }
+.weather .w-icon { display: grid; color: #F6C760; }
+.weather .w-icon.cool { color: #9CC3F0; }
+.weather .w-temp { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.weather .w-city { font-size: 11.5px; color: var(--ink-dim); }
+.weather svg { pointer-events: none; }
+
 /* ---------- 시계 ---------- */
 #clock {
   min-width: 64px;
@@ -410,7 +436,7 @@ body.awake #dock { opacity: 1; }
   background: rgba(12, 16, 26, 0.92);
   border-radius: 7px;
   pointer-events: none;
-  transform: translateX(-50%);
+  transform: translate(-50%, -100%);
 }
 #toast {
   position: fixed;

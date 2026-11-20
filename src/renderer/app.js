@@ -45,8 +45,18 @@
     tip.textContent = text;
     tip.hidden = false;
     const r = el.getBoundingClientRect();
-    tip.style.left = `${r.left + r.width / 2}px`;
-    tip.style.top = `${r.top - 30}px`;
+    const cx = r.left + r.width / 2;
+    // 아이콘이 놓인 검은 배경(메뉴 줄·패널·독)의 윗변 기준
+    const box = el.closest('.row, .panel, #dock') || el;
+    let top = box.getBoundingClientRect().top;
+    // 독 아이콘인데 위에 메뉴가 열려 있고 가로로 겹치면, 메뉴 위로 올린다
+    if (box.id === 'dock' && !pop.hidden) {
+      const pr = (pop.querySelector('.row, .panel') || pop).getBoundingClientRect();
+      const half = tip.offsetWidth / 2;
+      if (cx + half > pr.left && cx - half < pr.right) top = Math.min(top, pr.top);
+    }
+    tip.style.left = `${cx}px`;
+    tip.style.top = `${top - 4}px`;
   }
   function hideTip() { tip.hidden = true; }
   document.addEventListener('mouseover', (e) => {
@@ -279,6 +289,49 @@
   awakeBtn.addEventListener('click', async () => renderAwake(await api.toggleAwake()));
   api.onAwake(renderAwake);
 
+  // ---------- 날씨 ----------
+  const weatherBtn = $('#weather');
+  let weatherNow = null;
+  // WMO 날씨 코드 → [설명, 아이콘(낮), 아이콘(밤)]
+  function describe(code) {
+    if (code === 0) return ['맑음', 'sun', 'moon'];
+    if (code <= 2) return ['구름 조금', 'cloud-sun', 'cloud-moon'];
+    if (code === 3) return ['흐림', 'cloud', 'cloud'];
+    if (code === 45 || code === 48) return ['안개', 'cloud-fog', 'cloud-fog'];
+    if (code >= 51 && code <= 57) return ['이슬비', 'cloud-drizzle', 'cloud-drizzle'];
+    if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return ['비', 'cloud-rain', 'cloud-rain'];
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['눈', 'cloud-snow', 'cloud-snow'];
+    if (code >= 95) return ['뇌우', 'cloud-lightning', 'cloud-lightning'];
+    return ['날씨', 'cloud', 'cloud'];
+  }
+  function renderWeather(st) {
+    weatherNow = st;
+    if (!st) { weatherBtn.hidden = true; return; }
+    weatherBtn.hidden = false;
+    weatherBtn.querySelector('.w-city').textContent = st.city;
+    const iconEl = weatherBtn.querySelector('.w-icon');
+    if (st.error) {
+      iconEl.innerHTML = window.icon('cloud', 18);
+      iconEl.classList.add('cool');
+      weatherBtn.querySelector('.w-temp').textContent = '--°';
+      weatherBtn.dataset.tip = `${st.city} 날씨를 가져오지 못했습니다 · 누르면 다시 시도`;
+      return;
+    }
+    const [text, dayIcon, nightIcon] = describe(st.code);
+    const name = st.isDay ? dayIcon : nightIcon;
+    iconEl.innerHTML = window.icon(name, 18);
+    iconEl.classList.toggle('cool', !['sun', 'cloud-sun'].includes(name));
+    weatherBtn.querySelector('.w-temp').textContent = `${Math.round(st.temp)}°`;
+    weatherBtn.dataset.tip = `${st.city} ${text} · 최고 ${Math.round(st.max)}° / 최저 ${Math.round(st.min)}° · 누르면 자세히`;
+  }
+  weatherBtn.addEventListener('click', async () => {
+    if (!weatherNow) return;
+    if (weatherNow.error) { api.refreshWeather(); return; }
+    const res = await api.openItem({ type: 'url', target: `https://search.naver.com/search.naver?query=${encodeURIComponent(`${weatherNow.city} 날씨`)}` });
+    if (!res.ok) showToast(`날씨 페이지를 열지 못했습니다: ${res.message}`);
+  });
+  api.onWeather(renderWeather);
+
   // ---------- 시계 ----------
   const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
   function tick() {
@@ -300,6 +353,7 @@
     config = await api.getConfig();
     renderDock();
     renderAwake(await api.getAwake());
+    renderWeather(await api.getWeather());
   })();
   api.onConfigChanged((cfg) => {
     config = cfg;

@@ -71,6 +71,7 @@
 
   function markDirty() {
     dirty = true;
+    api.setSettingsDirty(true);
     $('#save').disabled = false;
     $('#dirty').textContent = '저장하지 않은 변경 사항이 있습니다';
   }
@@ -264,6 +265,13 @@
     $('#quiet-start').value = q.start;
     $('#quiet-end').value = q.end;
     $('#holidays').value = (cfg.holidays || []).join('\n');
+    const w = { on: true, city: '서울', ...(cfg.weather || {}) };
+    $('#weather-on').checked = w.on;
+    const sel = $('#weather-city');
+    if (!sel.options.length) {
+      for (const name of await api.weatherCities()) sel.add(new Option(name, name));
+    }
+    sel.value = w.city;
     $('#login').checked = await api.getLogin();
   }
   $('#opacity').addEventListener('input', (e) => {
@@ -278,6 +286,12 @@
     markDirty();
   };
   ['#quiet-on', '#quiet-start', '#quiet-end'].forEach((s) => $(s).addEventListener('change', quietSync));
+  const weatherSync = () => {
+    cfg.weather = { on: $('#weather-on').checked, city: $('#weather-city').value };
+    markDirty();
+  };
+  $('#weather-on').addEventListener('change', weatherSync);
+  $('#weather-city').addEventListener('change', weatherSync);
   $('#holidays').addEventListener('input', (e) => {
     cfg.holidays = e.target.value.split(/\s+/).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
     markDirty();
@@ -296,11 +310,16 @@
   $('#save').addEventListener('click', async () => {
     await api.saveConfig(JSON.parse(JSON.stringify(cfg)));
     dirty = false;
+    api.setSettingsDirty(false);
     $('#save').disabled = true;
     $('#dirty').textContent = '저장했습니다';
   });
-  window.addEventListener('beforeunload', (e) => {
-    if (dirty && !confirm('저장하지 않은 변경 사항이 있습니다. 닫을까요?')) e.returnValue = false;
+  // 창을 닫을 때 저장하지 않은 변경이 있으면 메인 프로세스가 물어본다. '저장하고 닫기'를 고르면 여기서 저장한다.
+  api.onSaveRequest(async () => {
+    await api.saveConfig(JSON.parse(JSON.stringify(cfg)));
+    dirty = false;
+    api.setSettingsDirty(false);
+    api.closeSettings();
   });
 
   function render() {

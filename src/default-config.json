@@ -12,6 +12,10 @@
       "end": "13:00"
     }
   },
+  "weather": {
+    "on": true,
+    "city": "서울"
+  },
   "categories": [
     {
       "id": "search",

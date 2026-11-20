@@ -2,7 +2,7 @@
 // 화면 아래(작업 표시줄 바로 위)에 투명한 창을 띄우고, 독(dock) 영역 위에서만 마우스를 받는다.
 const {
   app, BrowserWindow, ipcMain, screen, shell, clipboard, Tray, Menu,
-  nativeImage, Notification, dialog, net, powerSaveBlocker,
+  nativeImage, Notification, dialog, net, powerSaveBlocker, powerMonitor,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -13,6 +13,7 @@ const ICON_PATH = path.join(__dirname, 'assets', 'icon.png');
 
 let dockWin = null;
 let settingsWin = null;
+let settingsDirty = false; // 설정 창에 저장하지 않은 변경이 있는지
 let tray = null;
 let config = null;
 const clipHistory = [];
@@ -180,6 +181,23 @@ function openSettings() {
     },
   });
   settingsWin.on('page-title-updated', (e) => e.preventDefault()); // 창 제목에 버전 표시 유지
+  settingsDirty = false;
+  settingsWin.on('close', (e) => {
+    if (!settingsDirty) return;
+    e.preventDefault();
+    const choice = dialog.showMessageBoxSync(settingsWin, {
+      type: 'question',
+      title: '업무 툴바 설정',
+      message: '저장하지 않은 변경 사항이 있습니다.',
+      detail: '저장하지 않고 닫으면 바꾼 내용이 사라집니다.',
+      buttons: ['저장하고 닫기', '저장하지 않고 닫기', '취소'],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+    });
+    if (choice === 0) settingsWin.webContents.send('settings:save-request');
+    else if (choice === 1) { settingsDirty = false; settingsWin.close(); }
+  });
   settingsWin.loadFile(path.join(__dirname, 'settings', 'settings.html'));
 }
 
@@ -320,14 +338,49 @@ function toggleAwake() {
   return applyAwake();
 }
 
+// ---------- 날씨 (Open-Meteo, 가입·키 없이 쓰는 무료 날씨 서비스) ----------
+const CITIES = require('./shared/cities.json');
+let weatherState = null;
+function weatherCfg() { return { on: true, city: '서울', ...(config.weather || {}) }; }
+async function refreshWeather() {
+  const w = weatherCfg();
+  if (!w.on) { weatherState = null; sendWeather(); return; }
+  const city = CITIES.find((c) => c.name === w.city) || CITIES[0];
+  const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + city.lat + '&longitude=' + city.lon +
+    '&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&forecast_days=1';
+  try {
+    const res = await fetchWithTimeout(url, 10000);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    weatherState = {
+      city: city.name,
+      temp: j.current.temperature_2m,
+      code: j.current.weather_code,
+      isDay: j.current.is_day === 1,
+      max: j.daily.temperature_2m_max[0],
+      min: j.daily.temperature_2m_min[0],
+      at: Date.now(),
+    };
+  } catch (err) {
+    // 실패하면 마지막 값을 그대로 두고, 값이 없으면 오류만 알린다
+    if (!weatherState || weatherState.city !== city.name) weatherState = { city: city.name, error: true };
+  }
+  sendWeather();
+}
+function sendWeather() {
+  if (dockWin && !dockWin.isDestroyed()) dockWin.webContents.send('weather:update', weatherState);
+}
+
 // ---------- IPC ----------
 function registerIpc() {
   ipcMain.handle('config:get', () => config);
   ipcMain.handle('config:default', () => readDefaultConfig());
   ipcMain.handle('config:save', (e, cfg) => {
     config = cfg;
+    const before = JSON.stringify(weatherCfg());
     writeConfig(cfg);
     applyAwake();
+    if (JSON.stringify(weatherCfg()) !== before) refreshWeather();
     if (dockWin) dockWin.webContents.send('config:changed', cfg);
     return true;
   });
@@ -425,10 +478,16 @@ function registerIpc() {
     if (Notification.isSupported()) new Notification({ title, body, icon: ICON_PATH }).show();
   });
 
+  ipcMain.handle('weather:get', () => weatherState);
+  ipcMain.handle('weather:cities', () => CITIES.map((c) => c.name));
+  ipcMain.handle('weather:refresh', () => refreshWeather());
+
   ipcMain.handle('awake:get', () => awakeState());
   ipcMain.handle('awake:toggle', () => toggleAwake());
 
   ipcMain.on('settings:open', openSettings);
+  ipcMain.on('settings:dirty', (e, d) => { settingsDirty = !!d; });
+  ipcMain.on('settings:close', () => { settingsDirty = false; if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close(); });
   ipcMain.on('app:quit', () => app.quit());
   ipcMain.on('dock:hide', () => dockWin && dockWin.hide());
 
@@ -465,6 +524,9 @@ if (!app.requestSingleInstanceLock(instanceInfo)) {
     watchClipboard();
     applyAwake();
     setInterval(applyAwake, 20000);
+    refreshWeather();
+    setInterval(refreshWeather, 30 * 60 * 1000);
+    powerMonitor.on('resume', () => setTimeout(refreshWeather, 5000));
     screen.on('display-metrics-changed', placeDock);
     screen.on('display-added', placeDock);
     screen.on('display-removed', placeDock);

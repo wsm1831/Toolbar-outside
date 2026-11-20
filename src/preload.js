@@ -27,12 +27,20 @@ contextBridge.exposeInMainWorld('api', {
   loadMemo: () => ipcRenderer.invoke('memo:load'),
   saveMemo: (text) => ipcRenderer.invoke('memo:save', text),
 
+  getWeather: () => ipcRenderer.invoke('weather:get'),
+  weatherCities: () => ipcRenderer.invoke('weather:cities'),
+  refreshWeather: () => ipcRenderer.invoke('weather:refresh'),
+  onWeather: (cb) => ipcRenderer.on('weather:update', (e, st) => cb(st)),
+
   getAwake: () => ipcRenderer.invoke('awake:get'),
   toggleAwake: () => ipcRenderer.invoke('awake:toggle'),
   onAwake: (cb) => ipcRenderer.on('awake:state', (e, st) => cb(st)),
 
   notify: (title, body) => ipcRenderer.send('notify', title, body),
   openSettings: () => ipcRenderer.send('settings:open'),
+  setSettingsDirty: (dirty) => ipcRenderer.send('settings:dirty', dirty),
+  onSaveRequest: (cb) => ipcRenderer.on('settings:save-request', () => cb()),
+  closeSettings: () => ipcRenderer.send('settings:close'),
   quit: () => ipcRenderer.send('app:quit'),
   getLogin: () => ipcRenderer.invoke('login:get'),
   setLogin: (on) => ipcRenderer.invoke('login:set', on),
