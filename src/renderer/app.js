@@ -71,11 +71,13 @@
     btn.textContent = (name || '?').trim().charAt(0);
   }
 
-  function setImage(btn, src) {
+  function setImage(btn, src, scale) {
     btn.textContent = '';
     const img = document.createElement('img');
     img.src = src;
     img.alt = '';
+    // 이름이 들어간 아이콘처럼 크게 보여야 하는 것은 iconScale(0~1)로 크기를 키운다
+    if (scale) { img.style.width = `${scale * 100}%`; img.style.height = `${scale * 100}%`; }
     btn.appendChild(img);
   }
 
@@ -89,7 +91,7 @@
     }
     if (ic.startsWith('data:')) {
       btn.classList.add('tile-paper');
-      setImage(btn, ic);
+      setImage(btn, ic, item.iconScale);
       return;
     }
     if (item.type === 'tool') {
