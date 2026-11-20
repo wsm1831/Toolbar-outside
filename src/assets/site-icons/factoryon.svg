@@ -1,11 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-  <defs>
-    <linearGradient id="g" x1="0.15" y1="0.1" x2="0.85" y2="0.95">
-      <stop offset="0" stop-color="#6DB784"/>
-      <stop offset="0.5" stop-color="#2F9590"/>
-      <stop offset="1" stop-color="#14699C"/>
-    </linearGradient>
-  </defs>
-  <circle cx="24" cy="24" r="17.4" fill="none" stroke="url(#g)" stroke-width="9.2"/>
-  <circle cx="24" cy="24" r="6.6" fill="#248E90"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="6 6.2 36.7 36.7"><defs><linearGradient id="g" x1="0.08" y1="-0.04" x2="1.05" y2="1.08"><stop offset="0" stop-color="#6DB784"/><stop offset="0.5" stop-color="#2F9590"/><stop offset="1" stop-color="#14699C"/></linearGradient></defs><circle cx="24.34" cy="24.53" r="14.6" fill="none" stroke="url(#g)" stroke-width="6.76"/><circle cx="24.34" cy="24.53" r="5.1" fill="#248E90"/></svg>
