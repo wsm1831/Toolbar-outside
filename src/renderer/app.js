@@ -3,7 +3,6 @@
   const api = window.api;
   const $ = (s) => document.querySelector(s);
   const cats = $('#cats');
-  const quick = $('#quick');
   const pop = $('#pop');
   const dock = $('#dock');
   const tip = $('#tip');
@@ -175,7 +174,6 @@
   function renderDock() {
     document.documentElement.style.setProperty('--idle-opacity', config.appearance?.idleOpacity ?? 0.35);
     cats.innerHTML = '';
-    quick.innerHTML = '';
     let pendingSep = false;
     const add = (el) => {
       if (pendingSep && cats.children.length) {
@@ -191,7 +189,6 @@
       if (cat.pinned) for (const item of cat.items || []) add(quickTile(item, cat));
       else add(catTile(cat));
     }
-    $('#sep-quick').hidden = true;
     $('#btn-settings').innerHTML = window.icon('settings', 16);
     drawNewsBadge();
   }

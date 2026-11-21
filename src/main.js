@@ -1076,8 +1076,6 @@ function registerIpc() {
   ipcMain.on('settings:open', openSettings);
   ipcMain.on('settings:dirty', (e, d) => { settingsDirty = !!d; });
   ipcMain.on('settings:close', () => { settingsDirty = false; if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close(); });
-  ipcMain.on('app:quit', () => app.quit());
-  ipcMain.on('dock:hide', () => dockWin && dockWin.hide());
 
   const loginPath = () => process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
   ipcMain.handle('login:get', () => app.getLoginItemSettings({ path: loginPath() }).openAtLogin);

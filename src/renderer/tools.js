@@ -607,7 +607,6 @@
   // ---------- 필지 조회 (브이월드 + 국토교통부 실거래가·건축물대장) ----------
   const won = (n) => `${Math.round(n).toLocaleString('ko-KR')}원`;
   const fnum = (n, d = 0) => Number(n || 0).toLocaleString('ko-KR', { maximumFractionDigits: d });
-  const ymd8p = (d) => (d && d.length === 8 ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : d || '-');
   let parcelMode = 'one';
   const parcel = {
     icon: 'land-plot',
@@ -696,7 +695,7 @@
           if (!b.items.length) { extra.append(h('<p class="muted">이 필지에 등록된 건축물이 없습니다.</p>')); status.textContent = ''; return; }
           for (const x of b.items) {
             const br = [['건물', x.name], ['주용도', x.purpose || '-'], ['구조', x.structure || '-'], ['층수', x.floors],
-              ['연면적', `${fnum(x.totArea, 2)}㎡`], ['건축면적', `${fnum(x.archArea, 2)}㎡`], ['대지면적', `${fnum(x.platArea, 2)}㎡`], ['사용승인', ymd8p(x.approved)]];
+              ['연면적', `${fnum(x.totArea, 2)}㎡`], ['건축면적', `${fnum(x.archArea, 2)}㎡`], ['대지면적', `${fnum(x.platArea, 2)}㎡`], ['사용승인', ymd8(x.approved)]];
             extra.appendChild(table(br));
             copyText += `\n\n[건축물대장] ${br.map(([k, v]) => `${k}: ${v}`).join(' / ')}`;
           }

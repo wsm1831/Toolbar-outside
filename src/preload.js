@@ -11,7 +11,6 @@ contextBridge.exposeInMainWorld('api', {
   setIgnoreMouse: (ignore) => ipcRenderer.send('dock:ignoreMouse', ignore),
   focusDock: () => ipcRenderer.send('dock:focus'),
   onBlur: (cb) => ipcRenderer.on('dock:blur', () => cb()),
-  hideDock: () => ipcRenderer.send('dock:hide'),
 
   openItem: (item) => ipcRenderer.invoke('item:open', item),
   fileIcon: (target) => ipcRenderer.invoke('icon:file', target),
@@ -58,7 +57,6 @@ contextBridge.exposeInMainWorld('api', {
   setSettingsDirty: (dirty) => ipcRenderer.send('settings:dirty', dirty),
   onSaveRequest: (cb) => ipcRenderer.on('settings:save-request', () => cb()),
   closeSettings: () => ipcRenderer.send('settings:close'),
-  quit: () => ipcRenderer.send('app:quit'),
   getLogin: () => ipcRenderer.invoke('login:get'),
   setLogin: (on) => ipcRenderer.invoke('login:set', on),
 });

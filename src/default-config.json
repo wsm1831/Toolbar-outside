@@ -1,8 +1,7 @@
 {
   "version": 19,
   "appearance": {
-    "idleOpacity": 0.35,
-    "tileSize": 52
+    "idleOpacity": 0.35
   },
   "awake": {
     "enabled": true,

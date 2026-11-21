@@ -51,7 +51,7 @@ html, body {
 }
 body.awake #dock { opacity: 1; }
 
-#cats, #quick { display: flex; gap: var(--gap); }
+#cats { display: flex; align-items: center; gap: var(--gap); }
 /* 툴바에 바로 놓인 도구: 카테고리(색 채운 타일)와 구분되게 어두운 타일에 색 아이콘 */
 .tile-quick.tile-tint { background: #2A3348; }
 

@@ -2,11 +2,11 @@
 // 사용: node scripts/build-icons.js
 const fs = require('fs');
 const path = require('path');
-const names = ['globe','wrench','folder','folder-open','sparkles','settings','sticky-note','calendar-days','timer',
-  'remove-formatting','clipboard-list','spell-check','languages','calculator','scissors','file-text','house','star',
-  'briefcase','book-open','link','x','chevron-left','copy','trash-2','plus','arrow-up','arrow-down','terminal',
-  'monitor','image','download','pencil','bell','clock','search','mail','building-2','scale','landmark','map',
-  'newspaper','app-window','power','eye-off','notebook-pen','paintbrush','activity','layout-grid','check','grip-vertical','factory','train-front','ruler','banknote','car-front','map-pinned','sun','moon','cloud-sun','cloud-moon','cloud','cloud-fog','cloud-drizzle','cloud-rain','cloud-snow','cloud-lightning','file-down','scan-line','bot','notepad-text','newspaper','refresh-cw','check-check','land-plot','map-pin','key-round','eye','gavel'];
+const names = ['globe','wrench','folder','folder-open','sparkles','settings','calendar-days','timer',
+  'remove-formatting','clipboard-list','spell-check','languages','calculator','scissors','house','star',
+  'briefcase','book-open','link','x','chevron-left','copy','trash-2','terminal',
+  'monitor','image','download','pencil','bell','search','mail','building-2','scale','landmark','map',
+  'newspaper','notebook-pen','activity','layout-grid','check','grip-vertical','factory','train-front','ruler','banknote','car-front','map-pinned','sun','moon','cloud-sun','cloud-moon','cloud','cloud-fog','cloud-drizzle','cloud-rain','cloud-snow','cloud-lightning','file-down','bot','notepad-text','newspaper','land-plot','gavel'];
 const dir = path.dirname(require.resolve('lucide-static/package.json')) + '/icons';
 const out = {};
 for (const n of names) {
