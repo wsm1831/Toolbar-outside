@@ -1,5 +1,5 @@
 {
-  "version": 12,
+  "version": 13,
   "appearance": {
     "idleOpacity": 0.35,
     "tileSize": 52
@@ -274,13 +274,14 @@
           "target": "https://papago.naver.com",
           "icon": "builtin:languages"
         }
-      ]
+      ],
+      "side": "right"
     },
     {
       "id": "quick",
       "name": "툴바 바로가기",
       "icon": "layout-grid",
-      "color": "#7FA8D9",
+      "color": "#9C7CF0",
       "pinned": true,
       "items": [
         {

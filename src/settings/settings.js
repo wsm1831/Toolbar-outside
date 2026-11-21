@@ -6,10 +6,10 @@
     'building-2', 'newspaper', 'map', 'mail', 'search', 'monitor', 'terminal', 'image', 'download', 'pencil', 'link',
     'layout-grid', 'house', 'activity', 'bell'];
   const COLORS = ['#4C9BEF', '#E9A23B', '#34B89A', '#9C7CF0', '#E5667A', '#5B6B8C', '#3FA7C9', '#C98A4B'];
-  const TYPES = { url: '홈페이지', app: '프로그램', folder: '폴더', tool: '유틸리티' };
+  const TYPES = { url: '홈페이지', app: '프로그램', folder: '폴더', tool: '내장 도구' };
 
   let cfg = null;
-  let view = { kind: 'cat', index: 0 };
+  let view = { kind: 'general' };
   let dirty = false;
 
   const uid = () => Math.random().toString(36).slice(2, 9);
@@ -107,6 +107,8 @@
     if (!cat) { view = { kind: 'general' }; return render(); }
     $('#cat-name').value = cat.name;
     $('#cat-pinned').checked = !!cat.pinned;
+    $('#cat-right').checked = cat.side === 'right';
+    $('#cat-right').disabled = !!cat.pinned;
 
     const ig = $('#cat-icons');
     ig.innerHTML = '';
@@ -147,6 +149,7 @@
       <select class="type" aria-label="종류">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
       <div class="target"></div>
       <div class="row-actions">
+        <select class="move" aria-label="위치" title="위치: 다른 카테고리로 옮기기"></select>
         <button class="icon-only danger del" aria-label="삭제" title="삭제">${window.icon('trash-2', 16)}</button>
       </div>`;
     const name = li.querySelector('.name');
@@ -212,6 +215,20 @@
       if (data) { item.icon = data; item.iconCustom = true; markDirty(); renderIco(); }
     });
 
+    // 위치: 다른 카테고리로 옮기기
+    const mv = li.querySelector('.move');
+    cfg.categories.forEach((c, ci) => {
+      const label = `위치: ${c.name}${c.pinned ? ' (툴바에 바로)' : ''}`;
+      mv.add(new Option(label, ci, false, ci === view.index));
+    });
+    mv.addEventListener('change', () => {
+      const to = cfg.categories[Number(mv.value)];
+      const [moved] = cat.items.splice(i, 1);
+      to.items.push(moved);
+      markDirty(); renderCat();
+      $('#dirty').textContent = `'${moved.name}' 항목을 '${to.name}'(으)로 옮겼습니다 · 저장하면 적용됩니다`;
+    });
+
     // 키보드: Alt+↑/↓ 로도 순서 바꾸기
     li.addEventListener('keydown', (e) => {
       if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
@@ -236,6 +253,11 @@
   $('#cat-pinned').addEventListener('change', (e) => {
     const cat = cfg.categories[view.index];
     if (e.target.checked) cat.pinned = true; else delete cat.pinned;
+    markDirty(); renderCat();
+  });
+  $('#cat-right').addEventListener('change', (e) => {
+    const cat = cfg.categories[view.index];
+    if (e.target.checked) cat.side = 'right'; else delete cat.side;
     markDirty();
   });
   $('#cat-name').addEventListener('input', (e) => { cfg.categories[view.index].name = e.target.value; markDirty(); renderSide(); });

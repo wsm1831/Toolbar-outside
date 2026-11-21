@@ -138,11 +138,32 @@
   }
 
   // ---------- 독 그리기 ----------
+  // 왼쪽: 일반 카테고리 / 구분선 / 오른쪽 도구 묶음: side:'right' 카테고리 + 바로 놓인(pinned) 항목
+  function catTile(cat) {
+    const b = document.createElement('button');
+    b.className = 'tile tile-cat';
+    b.style.setProperty('--c', cat.color || '#5B6B8C');
+    b.dataset.id = cat.id;
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-label', cat.name);
+    b.setAttribute('aria-expanded', 'false');
+    // 마우스를 올리면 아이콘이 사라지고 그 자리에 이름이 올라온다 (이름 풍선 대신)
+    b.innerHTML = `<span class="cat-ic">${window.icon(cat.icon || 'layout-grid', 26)}</span><span class="cat-name"></span>`;
+    const nm = b.querySelector('.cat-name');
+    nm.textContent = cat.name;
+    const len = [...cat.name].length;
+    nm.style.fontSize = `${len <= 3 ? 13 : len === 4 ? 12 : len === 5 ? 10.5 : 9.5}px`;
+    b.addEventListener('click', () => toggleCategory(cat.id));
+    return b;
+  }
+
   function renderDock() {
     document.documentElement.style.setProperty('--idle-opacity', config.appearance?.idleOpacity ?? 0.35);
     cats.innerHTML = '';
-    // '툴바에 바로 표시'(pinned) 카테고리의 항목은 독에 바로 놓는다
     quick.innerHTML = '';
+    for (const cat of config.categories.filter((c) => !c.pinned && c.side !== 'right')) cats.appendChild(catTile(cat));
+    for (const cat of config.categories.filter((c) => !c.pinned && c.side === 'right')) quick.appendChild(catTile(cat));
+    // '툴바에 바로 표시'(pinned) 카테고리의 항목은 독에 바로 놓는다
     for (const cat of config.categories.filter((c) => c.pinned)) {
       for (const item of cat.items || []) {
         const b = document.createElement('button');
@@ -150,7 +171,7 @@
         b.dataset.tip = item.name;
         b.dataset.qid = item.id;
         b.setAttribute('aria-label', item.name);
-        renderItemIcon(b, item, cat.color || '#7FA8D9');
+        renderItemIcon(b, item, cat.color || '#9C7CF0');
         b.addEventListener('click', () => {
           if (openQuickId === item.id) return closePop();
           activate(item, cat, b);
@@ -158,29 +179,13 @@
         quick.appendChild(b);
       }
     }
-    $('#sep-quick').hidden = !quick.children.length;
-    for (const cat of config.categories.filter((c) => !c.pinned)) {
-      const b = document.createElement('button');
-      b.className = 'tile tile-cat';
-      b.style.setProperty('--c', cat.color || '#5B6B8C');
-      b.dataset.id = cat.id;
-      b.setAttribute('role', 'tab');
-      b.setAttribute('aria-label', cat.name);
-      b.setAttribute('aria-expanded', 'false');
-      // 마우스를 올리면 아이콘이 사라지고 그 자리에 이름이 올라온다 (이름 풍선 대신)
-      b.innerHTML = `<span class="cat-ic">${window.icon(cat.icon || 'layout-grid', 26)}</span><span class="cat-name"></span>`;
-      const nm = b.querySelector('.cat-name');
-      nm.textContent = cat.name;
-      const len = [...cat.name].length;
-      nm.style.fontSize = `${len <= 3 ? 13 : len === 4 ? 12 : len === 5 ? 10.5 : 9.5}px`;
-      b.addEventListener('click', () => toggleCategory(cat.id));
-      cats.appendChild(b);
-    }
+    $('#sep-quick').hidden = !quick.children.length || !cats.children.length;
     $('#btn-settings').innerHTML = window.icon('settings', 16);
   }
 
+  const catButton = (id) => dock.querySelector(`.tile-cat[data-id="${CSS.escape(id || '')}"]`);
   function markActive() {
-    for (const b of cats.children) {
+    for (const b of dock.querySelectorAll('.tile-cat')) {
       const on = b.dataset.id === openCatId;
       b.classList.toggle('active', on);
       b.setAttribute('aria-expanded', String(on));
@@ -259,7 +264,7 @@
     const notch = document.createElement('div');
     notch.className = 'notch';
     pop.append(row, notch);
-    anchorPop(cats.querySelector(`[data-id="${CSS.escape(id)}"]`));
+    anchorPop(catButton(id));
   }
 
   async function activate(item, cat, anchor) {
@@ -294,7 +299,7 @@
     pop.append(panel, notch);
     api.focusDock();
     tool.render(panel.querySelector('.panel-body'), { api, config, showToast });
-    anchorPop(anchor || cats.querySelector(`[data-id="${CSS.escape(openCatId)}"]`));
+    anchorPop(anchor || catButton(openCatId));
   }
 
   // 다른 곳을 클릭하거나 Esc를 누르면 닫기

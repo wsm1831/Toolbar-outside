@@ -37,14 +37,14 @@ const mock = (cfg) => {
   await page.addStyleTag({ content: 'html{background:linear-gradient(160deg,#6d8fb5,#c9d6e3 55%,#e9e4d8)}' });
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${out}/1-idle.png` });
-  await page.hover('#cats [data-id="admin"]');
+  await page.hover('.tile-cat[data-id="admin"]');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${out}/2b-cathover.png` });
   await page.hover('#weather');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${out}/2-hover.png` });
   for (const [i, id] of [['3', 'admin'], ['4', 'utils']]) {
-    await page.click(`#cats [data-id="${id}"]`);
+    await page.click(`.tile-cat[data-id="${id}"]`);
     await page.waitForTimeout(700);
     await page.screenshot({ path: `${out}/${i}-${id}.png` });
     await page.hover('#pop .tile >> nth=1');
@@ -77,7 +77,7 @@ const mock = (cfg) => {
   // 애니메이션 중간 프레임
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
-  await page.click('#cats [data-id="trip"]');
+  await page.click('.tile-cat[data-id="trip"]');
   await page.waitForTimeout(120);
   await page.screenshot({ path: `${out}/7-anim-mid.png` });
   await page.keyboard.press('Escape');
@@ -86,10 +86,13 @@ const mock = (cfg) => {
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/7b-webcapture.png` });
   const errs = [];
-  const sp = await browser.newPage({ viewport: { width: 860, height: 640 }, deviceScaleFactor: 2, locale: 'ko-KR' });
+  const sp = await browser.newPage({ viewport: { width: 1000, height: 680 }, deviceScaleFactor: 2, locale: 'ko-KR' });
   sp.on('pageerror', (e) => errs.push(e.message));
   await sp.addInitScript(mock, cfg);
   await sp.goto('file://' + path.join(__dirname, '..', 'src', 'settings', 'settings.html'));
+  await sp.waitForTimeout(400);
+  await sp.screenshot({ path: `${out}/8a-settings-start.png` });
+  await sp.click('#cat-list li:nth-child(5) .nav');
   await sp.waitForTimeout(400);
   await sp.screenshot({ path: `${out}/8-settings.png` });
   await sp.click('#nav-general');

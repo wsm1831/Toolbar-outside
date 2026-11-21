@@ -76,6 +76,13 @@ function migrateConfig(cfg) {
     next.categories = next.categories.map((c) => (c.pinned ? c : { ...c, items: c.items.filter((it) => !moved.has(it.id)) }));
     if (!next.categories.some((c) => c.pinned)) next.categories.push(def.categories.find((c) => c.pinned));
   }
+  if (from < 13 && from >= 2) {
+    // v13: 유틸리티 카테고리를 오른쪽 도구 묶음으로, 바로가기 아이콘 색을 유틸리티 색으로 통일
+    const utils = next.categories.find((c) => c.id === 'utils');
+    if (utils) utils.side = 'right';
+    const col = utils ? utils.color : '#9C7CF0';
+    next.categories = next.categories.map((c) => (c.pinned ? { ...c, color: col } : c));
+  }
   writeConfig(next);
   return next;
 }
@@ -172,9 +179,9 @@ function openSettings() {
     return;
   }
   settingsWin = new BrowserWindow({
-    width: 860,
-    height: 640,
-    minWidth: 720,
+    width: 1000,
+    height: 680,
+    minWidth: 900,
     minHeight: 520,
     title: `업무 툴바 설정 (v${app.getVersion()})`,
     icon: ICON_PATH,

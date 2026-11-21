@@ -8,13 +8,13 @@
 </head>
 <body>
   <aside class="side">
-    <h1>메뉴</h1>
-    <ul id="cat-list"></ul>
-    <button id="add-cat" class="link-btn">카테고리 추가</button>
-    <hr>
     <ul>
       <li><button id="nav-general" class="nav">일반 설정</button></li>
     </ul>
+    <hr>
+    <h1>메뉴</h1>
+    <ul id="cat-list"></ul>
+    <button id="add-cat" class="link-btn">카테고리 추가</button>
   </aside>
 
   <main>
@@ -26,6 +26,7 @@
         </div>
       </div>
       <label class="line check pin-line"><input id="cat-pinned" type="checkbox"> 이 카테고리의 항목을 툴바에 바로 표시 (카테고리 버튼 없이)</label>
+      <label class="line check pin-line"><input id="cat-right" type="checkbox"> 카테고리 버튼을 오른쪽 도구 묶음(구분선 오른쪽)에 두기</label>
       <div class="cat-style">
         <div>
           <span class="lbl">아이콘</span>
@@ -38,7 +39,7 @@
       </div>
 
       <h2>메뉴 항목</h2>
-      <p class="hint">왼쪽 손잡이를 잡고 끌면 순서가 바뀝니다. 아이콘을 누르면 직접 고른 이미지로 바꿀 수 있습니다. 홈페이지는 사이트 아이콘을, 프로그램은 실행 파일 아이콘을 자동으로 씁니다.</p>
+      <p class="hint">'위치'에서 다른 카테고리를 고르면 항목이 그쪽으로 옮겨집니다(예: 유틸리티 ↔ 툴바 바로가기). 왼쪽 손잡이를 잡고 끌면 순서가 바뀝니다. 아이콘을 누르면 직접 고른 이미지로 바꿀 수 있습니다. 홈페이지는 사이트 아이콘을, 프로그램은 실행 파일 아이콘을 자동으로 씁니다.</p>
       <ol id="items"></ol>
       <button id="add-item" class="link-btn">항목 추가</button>
     </section>
