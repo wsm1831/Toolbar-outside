@@ -475,10 +475,11 @@
     async render(el, { api }) {
       el.append(h(`
         <div class="field"><label for="wc-url">저장할 페이지 주소</label><input id="wc-url" type="text" placeholder="https://..." autocomplete="off" spellcheck="false"></div>
-        <p class="muted" style="margin:0 0 10px">브라우저 주소창에서 Ctrl+L, Ctrl+C로 주소를 복사한 뒤 이 창을 열면 자동으로 들어갑니다. 스크롤해야 보이는 아래쪽까지 모두 저장합니다. '본문만 복사'는 광고·메뉴를 빼고 기사 글만 복사합니다.</p>
+        <p class="muted" style="margin:0 0 6px">브라우저 주소창에서 Ctrl+L, Ctrl+C로 주소를 복사한 뒤 이 창을 열면 자동으로 들어갑니다. 광고·메뉴·댓글을 빼고 기사 본문만 저장합니다.</p>
+        <label class="check"><input type="checkbox" class="full"> 광고·댓글까지 원본 화면 그대로 저장</label>
         <div class="actions">
-          <button class="btn ghost txt">본문만 복사</button>
-          <button class="btn ghost img">이미지(PNG)</button>
+          <button class="btn ghost txt">내용만 복사</button>
+          <button class="btn ghost img">PNG로 저장</button>
           <button class="btn pdf">PDF로 저장</button>
         </div>
         <p class="muted status" style="margin:8px 0 0" aria-live="polite"></p>
@@ -496,15 +497,15 @@
         busy = true;
         el.querySelectorAll('button').forEach((b) => { b.disabled = true; });
         status.textContent = '페이지를 불러와 아래쪽까지 읽는 중입니다… (10~30초)';
-        const r = await api.capturePage(url, format);
+        const r = await api.capturePage(url, format, { full: el.querySelector('.full').checked });
         busy = false;
         el.querySelectorAll('button').forEach((b) => { b.disabled = false; });
         if (r.ok && format === 'text') {
           // 제목 / (출처) / 본문 / 주소 순서로 복사
           const head = [r.title, [r.site, r.byline].filter(Boolean).join(' · ')].filter(Boolean).join('\n');
           await api.writeClipboard(`${head}\n\n${r.text}\n\n출처: ${r.url}`);
-          status.textContent = `본문을 복사했습니다 (${r.text.length.toLocaleString()}자). 한글·워드에 붙여 넣으세요.`;
-        } else if (r.ok) status.textContent = `저장했습니다: ${r.file}`;
+          status.textContent = `내용을 복사했습니다 (${r.text.length.toLocaleString()}자). 한글·워드에 붙여 넣으세요.`;
+        } else if (r.ok) status.textContent = `${r.bodyOnly ? '본문만' : '원본 화면 그대로'} 저장했습니다: ${r.file}`;
         else if (r.canceled) status.textContent = '저장을 취소했습니다.';
         else status.textContent = `저장하지 못했습니다: ${r.message}`;
       }
@@ -527,6 +528,10 @@
     async render(el, { api }) {
       el.append(h(`
         <div class="chips news-kw"></div>
+        <div class="kw-edit">
+          <input type="text" class="kw-in" placeholder="키워드 추가 (예: 스마트그린산단)" maxlength="30">
+          <button class="btn ghost kw-add">추가</button>
+        </div>
         <ul class="newslist"></ul>
         <div class="actions" style="justify-content:space-between;align-items:center">
           <span class="muted news-status"></span>
@@ -540,13 +545,25 @@
       function draw(st) {
         const kwBox = el.querySelector('.news-kw');
         kwBox.innerHTML = '';
+        if (filter && !st.keywords.includes(filter)) filter = null;
         for (const k of [null, ...st.keywords]) {
           const b = document.createElement('button');
           b.textContent = k || '전체';
           b.classList.toggle('on', filter === k);
           b.addEventListener('click', () => { filter = k; draw(st); });
+          if (k) {
+            // 키워드 지우기 (×)
+            const x = document.createElement('span');
+            x.className = 'kw-x'; x.textContent = '×'; x.title = `'${k}' 키워드 지우기`;
+            x.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              draw(await api.setNewsKeywords(st.keywords.filter((w) => w !== k)));
+            });
+            b.appendChild(x);
+          }
           kwBox.appendChild(b);
         }
+        current = st;
         const items = st.items.filter((i) => !filter || i.kw === filter).slice(0, 40);
         list.innerHTML = '';
         if (!st.on) { list.innerHTML = '<li class="empty">설정에서 키워드 뉴스 알림을 켜 주세요</li>'; return; }
@@ -565,8 +582,20 @@
         }
         el.querySelector('.news-status').textContent = st.unread ? `안 읽은 기사 ${st.unread}건` : '모두 읽었습니다';
       }
+      let current = null;
       draw(await api.getNews());
       window.__newsPanelDraw = draw;
+      const kwIn = el.querySelector('.kw-in');
+      async function addKw() {
+        const k = kwIn.value.trim();
+        if (!k) return;
+        if (current.keywords.length >= 10) { el.querySelector('.news-status').textContent = '키워드는 10개까지 넣을 수 있습니다.'; return; }
+        kwIn.value = '';
+        el.querySelector('.news-status').textContent = `'${k}' 기사를 가져오는 중…`;
+        draw(await api.setNewsKeywords([...current.keywords, k]));
+      }
+      el.querySelector('.kw-add').addEventListener('click', addKw);
+      kwIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') addKw(); });
       el.querySelector('.readall').addEventListener('click', () => api.readNews('*'));
       el.querySelector('.refresh').addEventListener('click', async (e) => {
         e.target.disabled = true; el.querySelector('.news-status').textContent = '가져오는 중…';
@@ -808,5 +837,5 @@
   };
 
   window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory, webcapture, news, parcel, laws };
-  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 전체 저장', news: '키워드 뉴스', parcel: '필지 조회', laws: '법령 개정 알림' };
+  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 저장', news: '키워드 뉴스', parcel: '필지 조회', laws: '법령 개정 알림' };
 })();

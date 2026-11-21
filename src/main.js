@@ -114,6 +114,17 @@ function migrateConfig(cfg) {
     const item = def.categories.find((c) => c.pinned).items.find((it) => it.id === 'laws');
     if (pinned && !has && item) pinned.items.push(item);
   }
+  if (from < 18 && from >= 2) {
+    // v18: 행정·법령에 '공공데이터포털' 추가 (국가통계포털 다음)
+    const admin = next.categories.find((c) => c.id === 'admin');
+    const has = next.categories.some((c) => c.items.some((it) => it.id === 'datagokr'));
+    const item = def.categories.find((c) => c.id === 'admin').items.find((it) => it.id === 'datagokr');
+    for (const c of next.categories) for (const it of c.items) if (it.id === 'webcapture' && it.name === '웹페이지 전체 저장') it.name = '웹페이지 저장';
+    if (admin && !has && item) {
+      const at = admin.items.findIndex((it) => it.id === 'kosis');
+      admin.items.splice(at >= 0 ? at + 1 : admin.items.length, 0, item);
+    }
+  }
   writeConfig(next);
   return next;
 }
@@ -434,7 +445,7 @@ function sendWeather() {
 
 // ---------- 웹페이지 전체 저장 (PDF / 이미지) ----------
 // 주소를 숨은 창에 열고, 아래쪽까지 한 번 훑어 내려 지연 로딩되는 그림을 불러온 뒤 저장한다.
-async function capturePage(url, format) {
+async function capturePage(url, format, opts = {}) {
   if (!/^https?:\/\//i.test(url)) throw new Error('http:// 또는 https:// 로 시작하는 주소를 넣어 주세요.');
   // 이미지 저장은 화면이 실제로 그려져야 하므로, 화면 밖에 투명·비활성 창으로 띄운다
   const win = new BrowserWindow({
@@ -453,10 +464,9 @@ async function capturePage(url, format) {
       let y = 0; const step = () => { y += 700; window.scrollTo(0, y);
         if (y < document.documentElement.scrollHeight && y < 60000) setTimeout(step, 120); else { window.scrollTo(0, 0); setTimeout(done, 800); } };
       step(); })`);
-    if (format === 'text') {
-      // 본문만 뽑기: Mozilla Readability(Firefox 읽기 모드)로 기사 본문을 찾고, 문단 줄바꿈을 살려 글자로 만든다
-      const lib = fs.readFileSync(path.join(__dirname, 'vendor', 'readability', 'Readability.js'), 'utf8');
-      const r = await win.webContents.executeJavaScript(`${lib}
+    // 본문 찾기: Mozilla Readability(Firefox 읽기 모드)로 광고·메뉴·댓글을 뺀 기사 본문을 찾는다
+    const lib = fs.readFileSync(path.join(__dirname, 'vendor', 'readability', 'Readability.js'), 'utf8');
+    const art = await win.webContents.executeJavaScript(`${lib}
 ;(() => {
   const a = new Readability(document.cloneNode(true)).parse();
   if (!a || !a.content) return null;
@@ -464,12 +474,50 @@ async function capturePage(url, format) {
   box.style.cssText = 'position:absolute;left:-99999px;top:0;width:800px;white-space:normal';
   box.innerHTML = a.content;
   document.body.appendChild(box);
+  // 제목: 끝에 붙은 ' - 언론사' 정리, 본문 첫머리에 같은 제목이 또 있으면 지운다
+  let title = (a.title || document.title || '').trim();
+  if (a.siteName) for (const sep of [' - ', ' | ', ' · ', ' : ']) if (title.endsWith(sep + a.siteName)) title = title.slice(0, -(sep + a.siteName).length);
+  const firstHead = box.querySelector('h1, h2');
+  if (firstHead && title && (title.includes(firstHead.innerText.trim()) || firstHead.innerText.trim().includes(title))) firstHead.remove();
   const text = box.innerText.replace(/\\n{3,}/g, '\\n\\n').trim();
+  const content = box.innerHTML;
   box.remove();
-  return { title: a.title || document.title, byline: a.byline || '', site: a.siteName || '', text };
-})()`);
-      if (!r || !r.text) throw new Error('이 페이지에서 본문을 찾지 못했습니다. PDF나 이미지로 저장해 보세요.');
-      return { ok: true, ...r, url };
+  return { title, byline: a.byline || '', site: a.siteName || '', text, content };
+})()`).catch(() => null);
+    if (format === 'text') {
+      if (!art || !art.text) throw new Error('이 페이지에서 본문을 찾지 못했습니다. "원본 화면 그대로"를 켜고 PDF나 PNG로 저장해 보세요.');
+      return { ok: true, title: art.title, byline: art.byline, site: art.site, text: art.text, url };
+    }
+    let bodyOnly = false;
+    if (!opts.full && art && art.content && art.text.length > 200) {
+      // 본문만 깔끔한 문서로 다시 만들어 그 문서를 저장한다
+      const esc = (t) => String(t || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const today = new Date().toLocaleDateString('ko-KR');
+      const meta = [art.site, art.byline, `${today} 저장`].filter(Boolean).map(esc).join(' · ');
+      const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><base href="${esc(url)}"><title>${esc(art.title)}</title>
+<style>
+  body { font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; max-width: 760px; margin: 36px auto; padding: 0 32px; color: #111; background: #fff; font-size: 16px; line-height: 1.75; word-break: keep-all; }
+  h1 { font-size: 26px; line-height: 1.35; margin: 0 0 10px; }
+  .meta { color: #666; font-size: 13px; padding-bottom: 12px; margin-bottom: 24px; border-bottom: 1px solid #ddd; }
+  img, video, iframe { max-width: 100%; height: auto; }
+  figure { margin: 18px 0; } figcaption { color: #666; font-size: 13px; }
+  a { color: inherit; } table { border-collapse: collapse; } td, th { border: 1px solid #ccc; padding: 4px 8px; }
+  .src { margin-top: 32px; padding-top: 10px; border-top: 1px solid #ddd; color: #888; font-size: 12px; word-break: break-all; }
+  @page { margin: 16mm 14mm; }
+</style></head><body><h1>${esc(art.title)}</h1><div class="meta">${meta}</div>${art.content}<p class="src">출처: ${esc(url)}</p></body></html>`;
+      const tmp = userFile('capture-tmp.html');
+      fs.writeFileSync(tmp, html, 'utf8');
+      await win.loadFile(tmp);
+      // 그림이 다 불러와질 때까지 잠깐 기다린다 (최대 8초)
+      await win.webContents.executeJavaScript(`new Promise((done) => {
+        const imgs = [...document.images].filter((i) => !i.complete);
+        if (!imgs.length) return done();
+        let left = imgs.length; const t = setTimeout(done, 8000);
+        imgs.forEach((i) => { const f = () => { if (--left === 0) { clearTimeout(t); done(); } }; i.onload = f; i.onerror = f; });
+      })`);
+      bodyOnly = true;
+      win.setContentSize(860, 900); // 본문 폭에 맞춰 좌우 여백을 줄인다
+      await new Promise((r) => setTimeout(r, 200));
     }
     const title = (win.webContents.getTitle() || 'webpage').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 60) || 'webpage';
     const d = new Date();
@@ -487,7 +535,9 @@ async function capturePage(url, format) {
       const m = await dbg.sendCommand('Page.getLayoutMetrics');
       const size = m.cssContentSize || m.contentSize;
       const width = Math.ceil(Math.min(size.width, 1600));
-      const height = Math.ceil(Math.min(size.height, 30000)); // 너무 긴 페이지는 30000px에서 자름
+      let fullH = size.height;
+      if (bodyOnly) fullH = await win.webContents.executeJavaScript('Math.ceil(document.body.getBoundingClientRect().bottom + 36)');
+      const height = Math.ceil(Math.min(fullH, 30000)); // 너무 긴 페이지는 30000px에서 자름
       const shot = await withTimeout(dbg.sendCommand('Page.captureScreenshot', {
         format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width, height, scale: 1 },
       }), 40000, '이미지를 만드는 데 너무 오래 걸립니다. PDF로 저장해 보세요.');
@@ -503,7 +553,7 @@ async function capturePage(url, format) {
     if (r.canceled || !r.filePath) return { ok: false, canceled: true };
     fs.writeFileSync(r.filePath, data);
     shell.showItemInFolder(r.filePath);
-    return { ok: true, file: r.filePath };
+    return { ok: true, file: r.filePath, bodyOnly };
   } finally {
     if (!win.isDestroyed()) win.destroy();
   }
@@ -968,8 +1018,8 @@ function registerIpc() {
     if (Notification.isSupported()) new Notification({ title, body, icon: ICON_PATH }).show();
   });
 
-  ipcMain.handle('capture:page', async (e, url, format) => {
-    try { return await capturePage(String(url).trim(), format); } catch (err) { return { ok: false, message: err.message || String(err) }; }
+  ipcMain.handle('capture:page', async (e, url, format, opts) => {
+    try { return await capturePage(String(url).trim(), format, opts || {}); } catch (err) { return { ok: false, message: err.message || String(err) }; }
   });
   ipcMain.handle('vworld:search', async (e, q) => {
     try { return { ok: true, items: await vworldSearch(String(q)) }; } catch (err) { return { ok: false, message: err.message }; }
@@ -993,6 +1043,15 @@ function registerIpc() {
   ipcMain.handle('laws:read', () => { const st = loadLaws(); st.events.forEach((e) => { e.read = true; }); saveLaws(); sendLaws(); return true; });
   ipcMain.handle('news:get', () => newsPublic());
   ipcMain.handle('news:refresh', () => refreshNews());
+  // 뉴스 창에서 바로 키워드 추가·삭제
+  ipcMain.handle('news:setKeywords', async (e, list) => {
+    const keywords = [...new Set((list || []).map((k) => String(k).trim()).filter(Boolean))].slice(0, 10);
+    config.news = { ...newsCfg(), keywords };
+    writeConfig(config);
+    sendNews();
+    refreshNews();
+    return newsPublic();
+  });
   ipcMain.handle('news:read', (e, link) => {
     const st = loadNews();
     for (const i of st.items) if (link === '*' || i.link === link) i.read = true;

@@ -16,57 +16,70 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // ---------- 끌어서 순서 바꾸기 ----------
-  // 손잡이(.grip)를 잡고 끌면 그 줄만 움직인다. 놓으면 배열 순서를 바꾸고 onMove(옮긴 뒤 위치) 호출.
+  // 손잡이(.grip)를 누른 채 위아래로 움직이면 놓을 자리에 파란 선이 생기고, 놓으면 순서가 바뀐다.
+  // (Windows에서 브라우저 기본 드래그가 시작되지 않는 경우가 있어 마우스 움직임을 직접 따라간다)
   function sortable(container, arr, onMove) {
-    container.querySelectorAll('.grip').forEach((g) => {
-      g.addEventListener('mousedown', () => { g.closest('[data-idx]').draggable = true; });
-    });
     container._sort = { arr, onMove };
-    if (container._sortReady) return; // 목록 요소는 그대로라 이벤트는 한 번만 연결
+    container.querySelectorAll('.grip').forEach((g) => g.addEventListener('pointerdown', (e) => startDrag(e, container)));
+    if (container._sortReady) return;
     container._sortReady = true;
-    let from = -1;
-    const rows = () => [...container.children];
-    container.addEventListener('mouseup', () => rows().forEach((r) => { r.draggable = false; }));
-    container.addEventListener('dragstart', (e) => {
-      const row = e.target.closest('[data-idx]');
-      if (!row || !row.draggable) return e.preventDefault();
-      from = Number(row.dataset.idx);
+    // 끌고 난 직후의 클릭(카테고리 선택 등)은 무시
+    container.addEventListener('click', (e) => {
+      if (container._justDragged) { e.stopPropagation(); e.preventDefault(); container._justDragged = false; }
+    }, true);
+  }
+  function startDrag(e, container) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const grip = e.currentTarget;
+    const row = grip.closest('[data-idx]');
+    const rows = [...container.children].filter((r) => r.dataset.idx !== undefined);
+    const from = Number(row.dataset.idx);
+    let to = from; let moved = false;
+    const startY = e.clientY;
+    grip.setPointerCapture(e.pointerId);
+    const clear = () => rows.forEach((r) => r.classList.remove('drop-before', 'drop-after'));
+    function move(ev) {
+      if (!moved && Math.abs(ev.clientY - startY) < 4) return;
+      moved = true;
       row.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', String(from));
-    });
-    container.addEventListener('dragover', (e) => {
-      if (from < 0) return;
-      e.preventDefault();
-      const row = e.target.closest('[data-idx]');
-      rows().forEach((r) => r.classList.remove('drop-before', 'drop-after'));
-      if (!row) return;
-      const r = row.getBoundingClientRect();
-      row.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-before' : 'drop-after');
-    });
-    container.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const row = container.querySelector('.drop-before, .drop-after');
-      if (row && from >= 0) {
-        let to = Number(row.dataset.idx) + (row.classList.contains('drop-after') ? 1 : 0);
-        if (to > from) to -= 1;
-        if (to !== from) {
-          const { arr: list, onMove: done } = container._sort;
-          const [moved] = list.splice(from, 1);
-          list.splice(to, 0, moved);
-          from = -1;
-          markDirty();
-          done(to);
-          return;
-        }
+      document.body.classList.add('sorting');
+      clear();
+      // 마우스 높이에 따라 놓을 자리 계산
+      let target = rows[rows.length - 1]; let after = true;
+      for (const r of rows) {
+        const rc = r.getBoundingClientRect();
+        if (ev.clientY < rc.top + rc.height / 2) { target = r; after = false; break; }
       }
-      cleanup();
-    });
-    const cleanup = () => {
-      from = -1;
-      rows().forEach((r) => { r.draggable = false; r.classList.remove('dragging', 'drop-before', 'drop-after'); });
-    };
-    container.addEventListener('dragend', cleanup);
+      target.classList.add(after ? 'drop-after' : 'drop-before');
+      to = Number(target.dataset.idx) + (after ? 1 : 0);
+      if (to > from) to -= 1;
+      // 목록이 길면 가장자리에서 저절로 스크롤
+      const main = document.querySelector('main');
+      const mr = main.getBoundingClientRect();
+      if (ev.clientY > mr.bottom - 40) main.scrollTop += 12;
+      else if (ev.clientY < mr.top + 40) main.scrollTop -= 12;
+    }
+    function up() {
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', up);
+      grip.removeEventListener('pointercancel', up);
+      row.classList.remove('dragging');
+      document.body.classList.remove('sorting');
+      clear();
+      if (!moved) return;
+      container._justDragged = true;
+      setTimeout(() => { container._justDragged = false; }, 0);
+      if (to === from) return;
+      const { arr: list, onMove: done } = container._sort;
+      const [item] = list.splice(from, 1);
+      list.splice(to, 0, item);
+      markDirty();
+      done(to);
+    }
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', up);
+    grip.addEventListener('pointercancel', up);
   }
 
   function markDirty() {

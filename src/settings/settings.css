@@ -191,9 +191,14 @@ footer {
 .grip {
   display: grid;
   place-items: center;
+  align-self: stretch;
+  min-width: 18px;
   color: #A5AEBD;
   cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
+body.sorting, body.sorting * { cursor: grabbing !important; user-select: none; }
 .grip:hover { color: var(--ink); }
 .nav .nm { flex: 1; }
 .nav .grip { opacity: 0; }

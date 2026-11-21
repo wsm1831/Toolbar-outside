@@ -43,6 +43,7 @@ const mock = (cfg) => {
       { date: '2026.09.21', dong: '율곡동', jibun: '9**', jimok: '공장용지', zone: '일반공업지역', area: 1650, amount: 52000, unit: 315152 },
       { date: '2026.08.15', dong: '율곡동', jibun: '2**', jimok: '전', zone: '계획관리지역', area: 980, amount: 18000, unit: 183673 }] }),
     landBuilding: async () => ({ ok: true, items: [{ name: '김천혁신센터', purpose: '업무시설', structure: '철근콘크리트구조', totArea: 12345.6, archArea: 2500, platArea: 8000, floors: '지상 10층 / 지하 2층', approved: '20151230' }] }),
+    setNewsKeywords: async (list) => ({ on: true, unread: 3, keywords: list, items: [] }),
     refreshNews: async () => {}, readNews: async () => true, onNews: () => {},
     weatherCities: async () => ['서울', '부산', '김천'], refreshWeather: async () => {}, onWeather: () => {},
     capturePage: async () => ({ ok: true, file: 'C:\\Users\\me\\Downloads\\기사_20261121.pdf' }),
@@ -111,6 +112,12 @@ const mock = (cfg) => {
   await page.waitForTimeout(300);
   await page.click('#quick [data-qid="news"]');
   await page.waitForTimeout(500);
+  await page.fill('.kw-in', '스마트그린산단');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(200);
+  await page.click('.news-kw button:nth-child(3) .kw-x');
+  await page.waitForTimeout(200);
+  console.log('keywords:', await page.$$eval('.news-kw button', (b) => b.map((x) => x.firstChild.textContent)));
   await page.screenshot({ path: `${out}/7c-news.png` });
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
