@@ -1,8 +1,7 @@
 name: Windows 실행 파일 만들기
 
+# 코드를 올려도 자동으로 빌드하지 않는다. Actions 화면에서 'Run workflow' 버튼을 눌렀을 때만 빌드한다.
 on:
-  push:
-    branches: ['**']
   workflow_dispatch:
 
 permissions:
