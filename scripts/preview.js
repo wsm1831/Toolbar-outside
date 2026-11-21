@@ -37,6 +37,12 @@ const mock = (cfg) => {
         { name: '산업입지 및 개발에 관한 법률 시행령', kind: '일부개정', prom: '20250301', enf: '20250701', mst: '3' }] }),
     getHolidays: async () => ({ dates: ['2026-11-23'], names: {}, years: [2026, 2027], updatedAt: Date.now() }), refreshHolidays: async () => ({ dates: [], years: [], updatedAt: 0 }),
     refreshLaws: async () => {}, readLaws: async () => true, onLaws: () => {},
+    vworldBulkRow: async (q) => (q.includes('없는') ? { query: q, error: '찾지 못함' } : { query: q, addr: '경상북도 김천시 율곡동 ' + q.split(' ').pop(), jimok: '공장용지', zones: '일반공업지역', jiga: 412000, gosi: '2026년 1월', pnu: '4715010700110520000' }),
+    landTrades: async () => ({ ok: true, rows: [
+      { date: '2026.10.07', dong: '율곡동', jibun: '1**', jimok: '대', zone: '제2종일반주거지역', area: 330.5, amount: 12500, unit: 378215 },
+      { date: '2026.09.21', dong: '율곡동', jibun: '9**', jimok: '공장용지', zone: '일반공업지역', area: 1650, amount: 52000, unit: 315152 },
+      { date: '2026.08.15', dong: '율곡동', jibun: '2**', jimok: '전', zone: '계획관리지역', area: 980, amount: 18000, unit: 183673 }] }),
+    landBuilding: async () => ({ ok: true, items: [{ name: '김천혁신센터', purpose: '업무시설', structure: '철근콘크리트구조', totArea: 12345.6, archArea: 2500, platArea: 8000, floors: '지상 10층 / 지하 2층', approved: '20151230' }] }),
     refreshNews: async () => {}, readNews: async () => true, onNews: () => {},
     weatherCities: async () => ['서울', '부산', '김천'], refreshWeather: async () => {}, onWeather: () => {},
     capturePage: async () => ({ ok: true, file: 'C:\\Users\\me\\Downloads\\기사_20261121.pdf' }),
@@ -46,7 +52,7 @@ const mock = (cfg) => {
 
 (async () => {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1280, height: 600 }, deviceScaleFactor: 2, locale: 'ko-KR' });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 2, locale: 'ko-KR' });
   await page.addInitScript(mock, cfg);
   await page.goto('file://' + path.join(__dirname, '..', 'src', 'renderer', 'index.html'));
   // 바탕화면 느낌의 배경 (미리보기 전용)
@@ -118,6 +124,14 @@ const mock = (cfg) => {
   await page.click('.pc-list button');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${out}/7d-parcel.png` });
+  await page.click('.pc-detail .trade');
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${out}/7d2-trade.png` });
+  await page.click('.seg button[data-m="many"]');
+  await page.fill('#pc-bulk', '김천시 율곡동 1052\n김천시 율곡동 1053-2\n없는 주소 123\n김천시 율곡동 1060');
+  await page.click('.pc-run');
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${out}/7d3-bulk.png` });
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
   await page.click('#quick [data-qid="laws"]');

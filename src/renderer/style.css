@@ -464,7 +464,14 @@ body.awake #dock { opacity: 1; }
 .money-row .mv { font-size: 14.5px; line-height: 1.45; word-break: break-all; }
 
 /* 필지 조회 */
-.panel:has(.pc-list) { width: 420px; }
+.panel:has(.pc-list) { width: 460px; }
+.panel.wide:has(.pc-list) { width: min(760px, calc(100vw - 24px)); }
+.pc-tablewrap { max-height: 240px; overflow: auto; margin-top: 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
+.pc-grid { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.pc-grid th, .pc-grid td { padding: 6px 8px; text-align: left; white-space: nowrap; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.pc-grid th { position: sticky; top: 0; background: #263049; color: var(--ink-dim); font-weight: 600; }
+.pc-grid tr.err td { color: #F1A3A3; }
+.pc-extra .pc-table { margin-top: 4px; }
 .pc-row { display: grid; grid-template-columns: 70px 1fr; gap: 8px; padding: 4px 0; font-size: 13.5px; }
 .pc-row span:first-child { color: var(--ink-dim); }
 .pc-row span:last-child { word-break: break-all; }

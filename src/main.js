@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 
-const WINDOW_HEIGHT = 600; // 독 + 튀어오르는 메뉴/패널이 들어갈 높이
+const WINDOW_HEIGHT = 720; // 독 + 튀어오르는 메뉴/패널이 들어갈 높이
 const ICON_PATH = path.join(__dirname, 'assets', 'icon.png');
 
 let dockWin = null;
@@ -747,6 +747,114 @@ async function refreshHolidays(force) {
   return st;
 }
 
+// ---------- 여러 필지 한꺼번에 조회 ----------
+async function vworldBulkRow(query) {
+  const found = await vworldSearch(query);
+  const hit = found.find((f) => f.kind === '지번') || found[0];
+  if (!hit) return { query, error: '찾지 못함' };
+  const d = await vworldParcel(hit.x, hit.y);
+  return { query, addr: d.addr || hit.title, jibun: d.jibun || '', jimok: d.jimok || '', zones: d.zones.join(', '), jiga: d.jiga || '', gosi: d.gosi || '', pnu: d.pnu || '', x: d.x, y: d.y };
+}
+
+// ---------- 공공데이터포털(국토교통부): 토지 실거래가 · 건축물대장 ----------
+function dataKey() {
+  const k = (config.keys && config.keys.dataGoKr) || '';
+  if (!k) throw new Error('설정 → 일반 설정 → API 인증키에 공공데이터포털 인증키를 넣어 주세요.');
+  return k;
+}
+// 공공데이터포털 응답(XML 또는 JSON)에서 item 목록을 꺼낸다. 태그 이름은 영문(신규)·한글(구버전) 모두 받는다.
+function parseDataGoKr(text) {
+  const t = text.trim();
+  if (t.startsWith('{')) {
+    const j = JSON.parse(t);
+    const head = j.response && j.response.header;
+    if (head && head.resultCode && !['00', '000'].includes(String(head.resultCode))) throw new Error(`공공데이터포털: ${head.resultMsg || head.resultCode}`);
+    let items = j.response && j.response.body && j.response.body.items && j.response.body.items.item;
+    if (!items) return [];
+    return Array.isArray(items) ? items : [items];
+  }
+  const auth = t.match(/<returnAuthMsg>([^<]+)/);
+  if (auth) throw new Error(`공공데이터포털: ${auth[1]}`);
+  const code = t.match(/<resultCode>([^<]+)/);
+  if (code && !['00', '000'].includes(code[1].trim())) {
+    const msg = t.match(/<resultMsg>([^<]+)/);
+    throw new Error(`공공데이터포털: ${msg ? msg[1] : code[1]}`);
+  }
+  const out = [];
+  const re = /<item>([\s\S]*?)<\/item>/g; let m;
+  while ((m = re.exec(t))) {
+    const o = {}; const fr = /<([^>\/\s]+)>([^<]*)<\/\1>/g; let f;
+    while ((f = fr.exec(m[1]))) o[f[1]] = xmlText(f[2]);
+    out.push(o);
+  }
+  return out;
+}
+async function dataGet(urls) {
+  let lastErr;
+  for (const u of urls) {
+    try {
+      const res = await fetchWithTimeout(u, 15000);
+      const text = await res.text();
+      if (res.status === 404 || /API not found|Unexpected errors/i.test(text)) { lastErr = new Error(`HTTP ${res.status}`); continue; }
+      return parseDataGoKr(text);
+    } catch (err) { lastErr = err; if (/공공데이터포털:/.test(err.message)) throw err; }
+  }
+  throw lastErr || new Error('응답이 없습니다');
+}
+const pick = (o, ...keys) => { for (const k of keys) if (o[k] !== undefined && String(o[k]).trim() !== '') return String(o[k]).trim(); return ''; };
+
+// 토지 매매 실거래가: PNU 앞 5자리(시군구)로 최근 N개월 조회
+async function landTrades(pnu, months = 6) {
+  const key = encodeURIComponent(dataKey());
+  const lawd = String(pnu).slice(0, 5);
+  const now = new Date(); const rows = [];
+  for (let i = 0; i < months; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const q = `serviceKey=${key}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=1000&pageNo=1`;
+    const items = await dataGet([
+      `https://apis.data.go.kr/1613000/RTMSDataSvcLandTrade/getRTMSDataSvcLandTrade?${q}`,
+      `http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcLandTrade?${q}`,
+    ]);
+    for (const it of items) {
+      const amount = Number(pick(it, 'dealAmount', '거래금액').replace(/[^0-9]/g, '')); // 만원
+      const area = Number(pick(it, 'dealArea', '거래면적').replace(/[^0-9.]/g, '')); // ㎡
+      const y = pick(it, 'dealYear', '년'); const mo = pick(it, 'dealMonth', '월'); const dd = pick(it, 'dealDay', '일');
+      if (pick(it, 'cdealType', '해제여부') === 'O') continue; // 해제된 거래는 뺀다
+      rows.push({
+        date: `${y}.${String(mo).padStart(2, '0')}.${String(dd).padStart(2, '0')}`,
+        dong: pick(it, 'umdNm', '법정동'), jibun: pick(it, 'jibun', '지번'),
+        jimok: pick(it, 'jimok', '지목'), zone: pick(it, 'landUse', '용도지역'),
+        area, amount, unit: area ? Math.round((amount * 10000) / area) : 0,
+      });
+    }
+  }
+  rows.sort((a, b) => (a.date < b.date ? 1 : -1));
+  return rows;
+}
+
+// 건축물대장 표제부: PNU로 시군구·법정동·대지구분·번·지를 만든다
+async function buildingInfo(pnu) {
+  const key = encodeURIComponent(dataKey());
+  const p = String(pnu);
+  const q = `serviceKey=${key}&sigunguCd=${p.slice(0, 5)}&bjdongCd=${p.slice(5, 10)}&platGbCd=${p[10] === '2' ? '1' : '0'}&bun=${p.slice(11, 15)}&ji=${p.slice(15, 19)}&numOfRows=50&pageNo=1&_type=json`;
+  const items = await dataGet([
+    `https://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo?${q}`,
+    `https://apis.data.go.kr/1613000/BldRgstService_v2/getBrTitleInfo?${q}`,
+  ]);
+  return items.map((it) => ({
+    name: [pick(it, 'bldNm'), pick(it, 'dongNm')].filter(Boolean).join(' ') || '(건물명 없음)',
+    purpose: pick(it, 'mainPurpsCdNm', 'etcPurps'),
+    structure: pick(it, 'strctCdNm'),
+    totArea: Number(pick(it, 'totArea')) || 0,
+    archArea: Number(pick(it, 'archArea')) || 0,
+    platArea: Number(pick(it, 'platArea')) || 0,
+    floors: `지상 ${pick(it, 'grndFlrCnt') || 0}층 / 지하 ${pick(it, 'ugrndFlrCnt') || 0}층`,
+    approved: pick(it, 'useAprDay'),
+    kind: pick(it, 'regstrKindCdNm'),
+  }));
+}
+
 // ---------- IPC ----------
 function registerIpc() {
   ipcMain.handle('config:get', () => config);
@@ -868,6 +976,15 @@ function registerIpc() {
   });
   ipcMain.handle('vworld:parcel', async (e, x, y) => {
     try { return { ok: true, info: await vworldParcel(Number(x), Number(y)) }; } catch (err) { return { ok: false, message: err.message }; }
+  });
+  ipcMain.handle('vworld:bulkRow', async (e, q) => {
+    try { return await vworldBulkRow(String(q)); } catch (err) { return { query: q, error: err.message }; }
+  });
+  ipcMain.handle('land:trades', async (e, pnu, months) => {
+    try { return { ok: true, rows: await landTrades(String(pnu), Number(months) || 6) }; } catch (err) { return { ok: false, message: err.message }; }
+  });
+  ipcMain.handle('land:building', async (e, pnu) => {
+    try { return { ok: true, items: await buildingInfo(String(pnu)) }; } catch (err) { return { ok: false, message: err.message }; }
   });
   ipcMain.handle('holidays:get', () => loadHol());
   ipcMain.handle('holidays:refresh', (e, force) => refreshHolidays(!!force));

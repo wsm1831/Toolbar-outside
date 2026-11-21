@@ -575,21 +575,49 @@
     },
   };
 
-  // ---------- 필지 조회 (브이월드) ----------
+  // ---------- 필지 조회 (브이월드 + 국토교통부 실거래가·건축물대장) ----------
   const won = (n) => `${Math.round(n).toLocaleString('ko-KR')}원`;
+  const fnum = (n, d = 0) => Number(n || 0).toLocaleString('ko-KR', { maximumFractionDigits: d });
+  const ymd8p = (d) => (d && d.length === 8 ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : d || '-');
+  let parcelMode = 'one';
   const parcel = {
     icon: 'land-plot',
     render(el, { api }) {
       el.append(h(`
-        <div class="field"><label for="pc-q">주소·지번·장소명</label>
-          <div style="display:flex;gap:6px"><input id="pc-q" type="text" placeholder="예: 김천시 율곡동 1052 / 구미국가산업단지" autocomplete="off"><button class="btn go">찾기</button></div>
+        <div class="seg" role="tablist"><button data-m="one">한 필지</button><button data-m="many">여러 필지</button></div>
+        <div class="pc-one">
+          <div class="field"><label for="pc-q">주소·지번·장소명</label>
+            <div style="display:flex;gap:6px"><input id="pc-q" type="text" placeholder="예: 김천시 율곡동 1052 / 구미국가산업단지" autocomplete="off"><button class="btn go">찾기</button></div>
+          </div>
+          <ul class="cliplist pc-list"></ul>
+          <div class="pc-detail"></div>
         </div>
-        <ul class="cliplist pc-list"></ul>
-        <div class="pc-detail"></div>
+        <div class="pc-many">
+          <div class="field"><label for="pc-bulk">지번 목록 (한 줄에 하나, 엑셀에서 복사해 붙여 넣기)</label>
+            <textarea id="pc-bulk" rows="5" placeholder="김천시 율곡동 1052&#10;김천시 율곡동 1053-2&#10;..."></textarea></div>
+          <div class="actions" style="justify-content:space-between;align-items:center">
+            <span class="muted pc-prog"></span>
+            <span style="display:flex;gap:6px"><button class="btn ghost pc-tsv" disabled>엑셀용 복사</button><button class="btn pc-run">조회</button></span>
+          </div>
+          <div class="pc-tablewrap"><table class="pc-grid"></table></div>
+        </div>
         <p class="muted pc-status" style="margin:6px 0 0" aria-live="polite"></p>`));
+      const status = el.querySelector('.pc-status');
+      const panel = el.closest('.panel');
+      function setMode(m) {
+        parcelMode = m;
+        el.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.m === m));
+        el.querySelector('.pc-one').hidden = m !== 'one';
+        el.querySelector('.pc-many').hidden = m !== 'many';
+        panel.classList.toggle('wide', m === 'many');
+        status.textContent = '';
+        (m === 'one' ? el.querySelector('#pc-q') : el.querySelector('#pc-bulk')).focus();
+      }
+      el.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.m)));
+
+      // ----- 한 필지 -----
       const q = el.querySelector('#pc-q'); const list = el.querySelector('.pc-list');
-      const detail = el.querySelector('.pc-detail'); const status = el.querySelector('.pc-status');
-      q.focus();
+      const detail = el.querySelector('.pc-detail');
       async function search() {
         if (!q.value.trim()) return;
         status.textContent = '찾는 중…'; list.innerHTML = ''; detail.innerHTML = '';
@@ -604,6 +632,11 @@
           li.appendChild(b); list.appendChild(li);
         }
       }
+      const table = (rows) => {
+        const t = document.createElement('div'); t.className = 'result pc-table';
+        for (const [k, v] of rows) { const row = document.createElement('div'); row.className = 'pc-row'; row.innerHTML = '<span></span><span></span>'; row.children[0].textContent = k; row.children[1].textContent = v; t.appendChild(row); }
+        return t;
+      };
       async function show(it) {
         status.textContent = '토지 정보를 가져오는 중…';
         const r = await api.vworldParcel(it.x, it.y);
@@ -615,19 +648,105 @@
           ['공시지가', d.jiga ? `${won(d.jiga)}/㎡${d.gosi ? ` (${d.gosi})` : ''}` : '-'],
           ['PNU', d.pnu || '-'], ['좌표', `${d.y.toFixed(6)}, ${d.x.toFixed(6)}`],
         ];
-        detail.innerHTML = '<div class="result pc-table"></div><div class="actions"><button class="btn ghost back2">다른 결과</button><button class="btn ghost map">카카오맵</button><button class="btn copy">정보 복사</button></div>';
-        const t = detail.querySelector('.pc-table');
-        for (const [k, v] of rows) { const row = document.createElement('div'); row.className = 'pc-row'; row.innerHTML = '<span></span><span></span>'; row.children[0].textContent = k; row.children[1].textContent = v; t.appendChild(row); }
+        detail.innerHTML = '';
+        panel.classList.remove('wide');
+        detail.appendChild(table(rows));
+        detail.append(h(`<div class="actions" style="flex-wrap:wrap"><button class="btn ghost back2">다른 결과</button><button class="btn ghost bld">건축물대장</button><button class="btn ghost trade">실거래가</button><button class="btn ghost map">카카오맵</button><button class="btn copy">정보 복사</button></div><div class="pc-extra"></div>`));
+        const extra = detail.querySelector('.pc-extra');
         status.textContent = '용도지역은 도시·관리·농림·자연환경보전지역 기준입니다. 지구·구역 등 자세한 내용은 토지이음에서 확인하세요.';
-        detail.querySelector('.copy').addEventListener('click', async () => {
-          await api.writeClipboard(rows.map(([k, v]) => `${k}: ${v}`).join('\n'));
-          window.showToast('토지 정보를 복사했습니다', true);
-        });
+        let copyText = rows.map(([k, v]) => `${k}: ${v}`).join('\n');
+        detail.querySelector('.copy').addEventListener('click', async () => { await api.writeClipboard(copyText); window.showToast('토지 정보를 복사했습니다', true); });
         detail.querySelector('.map').addEventListener('click', () => api.openItem({ type: 'url', target: `https://map.kakao.com/link/map/${encodeURIComponent(d.addr || it.title)},${d.y},${d.x}` }));
         detail.querySelector('.back2').addEventListener('click', search);
+        detail.querySelector('.bld').addEventListener('click', async (e) => {
+          if (!d.pnu) { status.textContent = 'PNU가 없어 건축물대장을 찾을 수 없습니다.'; return; }
+          e.target.disabled = true; status.textContent = '건축물대장을 가져오는 중…';
+          const b = await api.landBuilding(d.pnu); e.target.disabled = false;
+          if (!b.ok) { status.textContent = `건축물대장: ${b.message}`; return; }
+          extra.innerHTML = '<h3 class="law-h">건축물대장 (표제부)</h3>';
+          if (!b.items.length) { extra.append(h('<p class="muted">이 필지에 등록된 건축물이 없습니다.</p>')); status.textContent = ''; return; }
+          for (const x of b.items) {
+            const br = [['건물', x.name], ['주용도', x.purpose || '-'], ['구조', x.structure || '-'], ['층수', x.floors],
+              ['연면적', `${fnum(x.totArea, 2)}㎡`], ['건축면적', `${fnum(x.archArea, 2)}㎡`], ['대지면적', `${fnum(x.platArea, 2)}㎡`], ['사용승인', ymd8p(x.approved)]];
+            extra.appendChild(table(br));
+            copyText += `\n\n[건축물대장] ${br.map(([k, v]) => `${k}: ${v}`).join(' / ')}`;
+          }
+          status.textContent = `건축물 ${b.items.length}동`;
+          extra.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        });
+        detail.querySelector('.trade').addEventListener('click', async (e) => {
+          if (!d.pnu) { status.textContent = 'PNU가 없어 실거래가를 찾을 수 없습니다.'; return; }
+          e.target.disabled = true; status.textContent = '최근 6개월 토지 실거래가를 가져오는 중… (10초 정도)';
+          const t = await api.landTrades(d.pnu, 6); e.target.disabled = false;
+          if (!t.ok) { status.textContent = `실거래가: ${t.message}`; return; }
+          const dong = ((d.addr || '').match(/\s(\S+[동리가읍면])\s/) || [])[1] || '';
+          const same = t.rows.filter((r) => !dong || r.dong === dong);
+          const rowsShown = (same.length ? same : t.rows).slice(0, 30);
+          extra.innerHTML = `<h3 class="law-h">토지 실거래가 · 최근 6개월 · ${same.length ? `${dong} ${same.length}건` : `시군구 전체 ${t.rows.length}건`}</h3>`;
+          if (!rowsShown.length) { extra.append(h('<p class="muted">최근 6개월 거래가 없습니다.</p>')); status.textContent = ''; return; }
+          const units = rowsShown.map((r) => r.unit).filter(Boolean).sort((a, b) => a - b);
+          const mid = units.length ? units[Math.floor(units.length / 2)] : 0;
+          const tw = document.createElement('div'); tw.className = 'pc-tablewrap';
+          const tb = document.createElement('table'); tb.className = 'pc-grid';
+          tb.innerHTML = '<thead><tr><th>계약일</th><th>법정동</th><th>지목</th><th>용도지역</th><th>면적(㎡)</th><th>금액(만원)</th><th>㎡당</th></tr></thead><tbody></tbody>';
+          for (const r of rowsShown) {
+            const tr = document.createElement('tr');
+            for (const v of [r.date, r.dong, r.jimok, r.zone, fnum(r.area, 1), fnum(r.amount), r.unit ? won(r.unit) : '-']) { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); }
+            tb.tBodies[0].appendChild(tr);
+          }
+          tw.appendChild(tb); extra.appendChild(tw);
+          panel.classList.add('wide'); // 표가 다 보이게 창을 넓힌다
+          status.textContent = mid ? `㎡당 가운데값 ${won(mid)} · 지번은 일부 가려져 제공됩니다` : '';
+          extra.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        });
       }
       el.querySelector('.go').addEventListener('click', search);
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+
+      // ----- 여러 필지 -----
+      const grid = el.querySelector('.pc-many .pc-grid');
+      const prog = el.querySelector('.pc-prog');
+      const tsvBtn = el.querySelector('.pc-tsv');
+      const HEAD = ['입력', '소재지', '지목', '용도지역', '공시지가(원/㎡)', '기준', 'PNU', '비고'];
+      let results = [];
+      let running = false;
+      function drawGrid() {
+        grid.innerHTML = `<thead><tr>${HEAD.map((x) => `<th>${x}</th>`).join('')}</tr></thead><tbody></tbody>`;
+        for (const r of results) {
+          const tr = document.createElement('tr');
+          if (r.error) tr.className = 'err';
+          for (const v of [r.query, r.addr || '', r.jimok || '', r.zones || '', r.jiga ? fnum(r.jiga) : '', r.gosi || '', r.pnu || '', r.error || '']) { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); }
+          grid.tBodies[0].appendChild(tr);
+        }
+      }
+      el.querySelector('.pc-run').addEventListener('click', async (e) => {
+        if (running) return;
+        const lines = el.querySelector('#pc-bulk').value.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 200);
+        if (!lines.length) { prog.textContent = '지번을 한 줄에 하나씩 넣어 주세요.'; return; }
+        running = true; e.target.disabled = true; tsvBtn.disabled = true;
+        results = lines.map((query) => ({ query, error: '대기' }));
+        drawGrid();
+        let done = 0; let next = 0;
+        async function worker() {
+          while (next < lines.length) {
+            const i = next++;
+            results[i] = await api.vworldBulkRow(lines[i]);
+            done++; prog.textContent = `${done} / ${lines.length} 조회`;
+            drawGrid();
+          }
+        }
+        await Promise.all([worker(), worker(), worker()]); // 동시에 3건씩
+        const fail = results.filter((r) => r.error).length;
+        prog.textContent = `${lines.length}건 완료${fail ? ` · 실패 ${fail}건` : ''}`;
+        running = false; e.target.disabled = false; tsvBtn.disabled = false;
+      });
+      tsvBtn.addEventListener('click', async () => {
+        const esc = (v) => String(v ?? '').replace(/[\t\n]/g, ' ');
+        const tsv = [HEAD, ...results.map((r) => [r.query, r.addr, r.jimok, r.zones, r.jiga, r.gosi, r.pnu, r.error])].map((row) => row.map(esc).join('\t')).join('\n');
+        await api.writeClipboard(tsv);
+        window.showToast('엑셀에 붙여 넣을 수 있게 복사했습니다', true);
+      });
+      setMode(parcelMode);
     },
   };
 
