@@ -194,6 +194,18 @@ body.awake #dock { opacity: 1; }
 .weather .w-icon.cool { color: #9CC3F0; }
 .weather .w-temp { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .weather .w-city { font-size: 11.5px; color: var(--ink-dim); }
+.weather .w-bottom { display: flex; align-items: center; gap: 5px; }
+.weather .w-air {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 6px;
+  color: #10202A;
+}
+.weather .w-air.g0 { background: #5DADE2; }
+.weather .w-air.g1 { background: #6CC57B; }
+.weather .w-air.g2 { background: #F5B041; }
+.weather .w-air.g3 { background: #EC7063; }
 .weather svg { pointer-events: none; }
 
 /* ---------- 시계 ---------- */
@@ -449,6 +461,56 @@ body.awake #dock { opacity: 1; }
   background: rgba(255, 255, 255, 0.05);
 }
 .money-row .mv { font-size: 14.5px; line-height: 1.45; word-break: break-all; }
+
+/* 키워드 뉴스 */
+.tile .badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  color: #fff;
+  background: #E5484D;
+  box-shadow: 0 0 0 2px var(--glass);
+  pointer-events: none;
+}
+.chips button.on { background: rgba(255, 255, 255, 0.16); border-color: transparent; }
+.panel:has(.newslist) { width: 420px; }
+.newslist { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
+.newslist li button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 8px 10px 8px 18px;
+  margin-bottom: 4px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--ink-dim);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  position: relative;
+}
+.newslist li button:hover { background: rgba(255, 255, 255, 0.1); }
+.newslist .nt { font-size: 13.5px; line-height: 1.4; }
+.newslist .nm { font-size: 11.5px; color: var(--ink-dim); }
+.newslist button.unread .nt { color: var(--ink); font-weight: 600; }
+.newslist button.unread::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 14px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #E5484D;
+}
 
 /* ---------- 이름 풍선, 알림 ---------- */
 #tip {

@@ -91,6 +91,15 @@ function migrateConfig(cfg) {
       next.categories.splice(at >= 0 ? at + 1 : 0, 0, ai);
     }
   }
+  if (from < 15 && from >= 2) {
+    // v15: 툴바 바로가기에 '키워드 뉴스', AI에 GitHub·Netlify·Cloudflare 추가
+    const defCat = (id) => def.categories.find((c) => c.id === id);
+    const pinned = next.categories.find((c) => c.pinned);
+    const hasItem = (id) => next.categories.some((c) => c.items.some((it) => it.id === id));
+    if (pinned && !hasItem('news')) pinned.items.push(defCat('quick').items.find((it) => it.id === 'news'));
+    const ai = next.categories.find((c) => c.id === 'ai');
+    if (ai) for (const id of ['github', 'netlify', 'cloudflare']) if (!hasItem(id)) ai.items.push(defCat('ai').items.find((it) => it.id === id));
+  }
   writeConfig(next);
   return next;
 }
@@ -362,7 +371,13 @@ function toggleAwake() {
 // ---------- 날씨 (Open-Meteo, 가입·키 없이 쓰는 무료 날씨 서비스) ----------
 const CITIES = require('./shared/cities.json');
 let weatherState = null;
-function weatherCfg() { return { on: true, city: '서울', ...(config.weather || {}) }; }
+function weatherCfg() { return { on: true, city: '서울', air: true, ...(config.weather || {}) }; }
+// 환경부 기준 미세먼지 등급 (PM10 / PM2.5 중 나쁜 쪽)
+function airGrade(pm10, pm25) {
+  const g10 = pm10 <= 30 ? 0 : pm10 <= 80 ? 1 : pm10 <= 150 ? 2 : 3;
+  const g25 = pm25 <= 15 ? 0 : pm25 <= 35 ? 1 : pm25 <= 75 ? 2 : 3;
+  return Math.max(g10, g25);
+}
 async function refreshWeather() {
   const w = weatherCfg();
   if (!w.on) { weatherState = null; sendWeather(); return; }
@@ -382,6 +397,17 @@ async function refreshWeather() {
       min: j.daily.temperature_2m_min[0],
       at: Date.now(),
     };
+    if (w.air) {
+      try {
+        const ar = await fetchWithTimeout('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + city.lat +
+          '&longitude=' + city.lon + '&current=pm10,pm2_5&timezone=Asia%2FSeoul', 10000);
+        const aj = await ar.json();
+        const pm10 = aj.current.pm10; const pm25 = aj.current.pm2_5;
+        if (typeof pm10 === 'number' && typeof pm25 === 'number') {
+          weatherState.air = { pm10: Math.round(pm10), pm25: Math.round(pm25), grade: airGrade(pm10, pm25) };
+        }
+      } catch { /* 미세먼지만 실패하면 날씨는 그대로 보여 준다 */ }
+    }
   } catch (err) {
     // 실패하면 마지막 값을 그대로 두고, 값이 없으면 오류만 알린다
     if (!weatherState || weatherState.city !== city.name) weatherState = { city: city.name, error: true };
@@ -413,6 +439,24 @@ async function capturePage(url, format) {
       let y = 0; const step = () => { y += 700; window.scrollTo(0, y);
         if (y < document.documentElement.scrollHeight && y < 60000) setTimeout(step, 120); else { window.scrollTo(0, 0); setTimeout(done, 800); } };
       step(); })`);
+    if (format === 'text') {
+      // 본문만 뽑기: Mozilla Readability(Firefox 읽기 모드)로 기사 본문을 찾고, 문단 줄바꿈을 살려 글자로 만든다
+      const lib = fs.readFileSync(path.join(__dirname, 'vendor', 'readability', 'Readability.js'), 'utf8');
+      const r = await win.webContents.executeJavaScript(`${lib}
+;(() => {
+  const a = new Readability(document.cloneNode(true)).parse();
+  if (!a || !a.content) return null;
+  const box = document.createElement('div');
+  box.style.cssText = 'position:absolute;left:-99999px;top:0;width:800px;white-space:normal';
+  box.innerHTML = a.content;
+  document.body.appendChild(box);
+  const text = box.innerText.replace(/\\n{3,}/g, '\\n\\n').trim();
+  box.remove();
+  return { title: a.title || document.title, byline: a.byline || '', site: a.siteName || '', text };
+})()`);
+      if (!r || !r.text) throw new Error('이 페이지에서 본문을 찾지 못했습니다. PDF나 이미지로 저장해 보세요.');
+      return { ok: true, ...r, url };
+    }
     const title = (win.webContents.getTitle() || 'webpage').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 60) || 'webpage';
     const d = new Date();
     const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
@@ -451,16 +495,82 @@ async function capturePage(url, format) {
   }
 }
 
+// ---------- 키워드 뉴스 알림 (구글 뉴스 RSS) ----------
+const NEWS_FILE = () => userFile('news.json');
+let newsState = null; // { items: [{ link, title, source, date, kw, read }], first: bool }
+function newsCfg() { return { on: true, keywords: ['산업단지', '산단 개발', '토지보상'], notify: true, ...(config.news || {}) }; }
+function loadNews() {
+  if (newsState) return newsState;
+  try { newsState = JSON.parse(fs.readFileSync(NEWS_FILE(), 'utf8')); } catch { newsState = { items: [], first: true }; }
+  return newsState;
+}
+function saveNews() { fs.writeFile(NEWS_FILE(), JSON.stringify(newsState), () => {}); }
+const xmlText = (s) => String(s || '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&amp;/g, '&').trim();
+function parseRss(xml, kw) {
+  const out = [];
+  const re = /<item>([\s\S]*?)<\/item>/g; let m;
+  while ((m = re.exec(xml))) {
+    const it = m[1];
+    const get = (tag) => { const r = it.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`)); return r ? xmlText(r[1]) : ''; };
+    const source = get('source');
+    let title = get('title');
+    if (source && title.endsWith(` - ${source}`)) title = title.slice(0, -(source.length + 3));
+    const link = get('link');
+    if (link && title) out.push({ link, title, source, date: Date.parse(get('pubDate')) || Date.now(), kw });
+  }
+  return out;
+}
+function newsPublic() {
+  const st = loadNews();
+  return { items: st.items, unread: st.items.filter((i) => !i.read).length, on: newsCfg().on, keywords: newsCfg().keywords };
+}
+function sendNews() { if (dockWin && !dockWin.isDestroyed()) dockWin.webContents.send('news:update', newsPublic()); }
+async function refreshNews() {
+  const cfg = newsCfg(); const st = loadNews();
+  if (!cfg.on || !cfg.keywords.length) { sendNews(); return; }
+  const known = new Set(st.items.map((i) => i.link));
+  const fresh = [];
+  for (const kw of cfg.keywords) {
+    try {
+      const res = await fetchWithTimeout(`https://news.google.com/rss/search?q=${encodeURIComponent(kw)}&hl=ko&gl=KR&ceid=KR:ko`, 15000);
+      if (!res.ok) continue;
+      for (const it of parseRss(await res.text(), kw)) {
+        if (known.has(it.link)) continue;
+        known.add(it.link);
+        fresh.push({ ...it, read: !!st.first }); // 처음 한 번은 쌓여 있던 기사를 모두 읽음으로
+      }
+    } catch { /* 한 키워드가 실패해도 다음 키워드 계속 */ }
+  }
+  const weekAgo = Date.now() - 14 * 86400000;
+  st.items = [...fresh, ...st.items].filter((i) => i.date > weekAgo).sort((a, b) => b.date - a.date).slice(0, 80);
+  const newOnes = fresh.filter((i) => !i.read);
+  if (st.first && fresh.length) st.first = false;
+  saveNews();
+  sendNews();
+  if (cfg.notify && newOnes.length && Notification.isSupported()) {
+    const n = new Notification({
+      title: `새 기사 ${newOnes.length}건`,
+      body: newOnes.slice(0, 3).map((i) => `[${i.kw}] ${i.title}`).join('\n'),
+      icon: ICON_PATH,
+    });
+    n.on('click', () => { if (newOnes.length === 1) shell.openExternal(newOnes[0].link); });
+    n.show();
+  }
+}
+
 // ---------- IPC ----------
 function registerIpc() {
   ipcMain.handle('config:get', () => config);
   ipcMain.handle('config:default', () => readDefaultConfig());
   ipcMain.handle('config:save', (e, cfg) => {
     const before = JSON.stringify(weatherCfg()); // 바꾸기 전 날씨 설정
+    const newsBefore = JSON.stringify(newsCfg());
     config = cfg;
     writeConfig(cfg);
     applyAwake();
     if (JSON.stringify(weatherCfg()) !== before) refreshWeather();
+    if (JSON.stringify(newsCfg()) !== newsBefore) refreshNews();
     if (dockWin) dockWin.webContents.send('config:changed', cfg);
     return true;
   });
@@ -561,6 +671,13 @@ function registerIpc() {
   ipcMain.handle('capture:page', async (e, url, format) => {
     try { return await capturePage(String(url).trim(), format); } catch (err) { return { ok: false, message: err.message || String(err) }; }
   });
+  ipcMain.handle('news:get', () => newsPublic());
+  ipcMain.handle('news:refresh', () => refreshNews());
+  ipcMain.handle('news:read', (e, link) => {
+    const st = loadNews();
+    for (const i of st.items) if (link === '*' || i.link === link) i.read = true;
+    saveNews(); sendNews(); return true;
+  });
   ipcMain.handle('weather:get', () => weatherState);
   ipcMain.handle('weather:cities', () => CITIES.map((c) => c.name));
   ipcMain.handle('weather:refresh', () => refreshWeather());
@@ -609,7 +726,9 @@ if (!app.requestSingleInstanceLock(instanceInfo)) {
     setInterval(applyAwake, 20000);
     refreshWeather();
     setInterval(refreshWeather, 30 * 60 * 1000);
-    powerMonitor.on('resume', () => setTimeout(refreshWeather, 5000));
+    setTimeout(refreshNews, 8000);
+    setInterval(refreshNews, 30 * 60 * 1000);
+    powerMonitor.on('resume', () => { setTimeout(refreshWeather, 5000); setTimeout(refreshNews, 15000); });
     screen.on('display-metrics-changed', placeDock);
     screen.on('display-added', placeDock);
     screen.on('display-removed', placeDock);

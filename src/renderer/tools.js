@@ -469,9 +469,10 @@
     async render(el, { api }) {
       el.append(h(`
         <div class="field"><label for="wc-url">저장할 페이지 주소</label><input id="wc-url" type="text" placeholder="https://..." autocomplete="off" spellcheck="false"></div>
-        <p class="muted" style="margin:0 0 10px">브라우저 주소창에서 Ctrl+L, Ctrl+C로 주소를 복사한 뒤 이 창을 열면 자동으로 들어갑니다. 스크롤해야 보이는 아래쪽까지 모두 저장합니다.</p>
+        <p class="muted" style="margin:0 0 10px">브라우저 주소창에서 Ctrl+L, Ctrl+C로 주소를 복사한 뒤 이 창을 열면 자동으로 들어갑니다. 스크롤해야 보이는 아래쪽까지 모두 저장합니다. '본문만 복사'는 광고·메뉴를 빼고 기사 글만 복사합니다.</p>
         <div class="actions">
-          <button class="btn ghost img">이미지(PNG)로 저장</button>
+          <button class="btn ghost txt">본문만 복사</button>
+          <button class="btn ghost img">이미지(PNG)</button>
           <button class="btn pdf">PDF로 저장</button>
         </div>
         <p class="muted status" style="margin:8px 0 0" aria-live="polite"></p>
@@ -492,16 +493,82 @@
         const r = await api.capturePage(url, format);
         busy = false;
         el.querySelectorAll('button').forEach((b) => { b.disabled = false; });
-        if (r.ok) status.textContent = `저장했습니다: ${r.file}`;
+        if (r.ok && format === 'text') {
+          // 제목 / (출처) / 본문 / 주소 순서로 복사
+          const head = [r.title, [r.site, r.byline].filter(Boolean).join(' · ')].filter(Boolean).join('\n');
+          await api.writeClipboard(`${head}\n\n${r.text}\n\n출처: ${r.url}`);
+          status.textContent = `본문을 복사했습니다 (${r.text.length.toLocaleString()}자). 한글·워드에 붙여 넣으세요.`;
+        } else if (r.ok) status.textContent = `저장했습니다: ${r.file}`;
         else if (r.canceled) status.textContent = '저장을 취소했습니다.';
         else status.textContent = `저장하지 못했습니다: ${r.message}`;
       }
       el.querySelector('.pdf').addEventListener('click', () => go('pdf'));
       el.querySelector('.img').addEventListener('click', () => go('png'));
+      el.querySelector('.txt').addEventListener('click', () => go('text'));
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go('pdf'); });
     },
   };
 
-  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory, webcapture };
-  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 전체 저장' };
+  // ---------- 키워드 뉴스 ----------
+  const ago = (t) => {
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 60) return `${Math.max(m, 1)}분 전`;
+    if (m < 1440) return `${Math.round(m / 60)}시간 전`;
+    return `${Math.round(m / 1440)}일 전`;
+  };
+  const news = {
+    icon: 'newspaper',
+    async render(el, { api }) {
+      el.append(h(`
+        <div class="chips news-kw"></div>
+        <ul class="newslist"></ul>
+        <div class="actions" style="justify-content:space-between;align-items:center">
+          <span class="muted news-status"></span>
+          <span style="display:flex;gap:6px">
+            <button class="btn ghost refresh">새로고침</button>
+            <button class="btn ghost readall">모두 읽음</button>
+          </span>
+        </div>`));
+      const list = el.querySelector('.newslist');
+      let filter = null;
+      function draw(st) {
+        const kwBox = el.querySelector('.news-kw');
+        kwBox.innerHTML = '';
+        for (const k of [null, ...st.keywords]) {
+          const b = document.createElement('button');
+          b.textContent = k || '전체';
+          b.classList.toggle('on', filter === k);
+          b.addEventListener('click', () => { filter = k; draw(st); });
+          kwBox.appendChild(b);
+        }
+        const items = st.items.filter((i) => !filter || i.kw === filter).slice(0, 40);
+        list.innerHTML = '';
+        if (!st.on) { list.innerHTML = '<li class="empty">설정에서 키워드 뉴스 알림을 켜 주세요</li>'; return; }
+        if (!items.length) { list.innerHTML = '<li class="empty">아직 가져온 기사가 없습니다. 잠시 뒤 다시 보거나 새로고침을 누르세요</li>'; return; }
+        for (const it of items) {
+          const li = document.createElement('li');
+          li.innerHTML = '<button><span class="nt"></span><span class="nm"></span></button>';
+          li.querySelector('button').classList.toggle('unread', !it.read);
+          li.querySelector('.nt').textContent = it.title;
+          li.querySelector('.nm').textContent = `${it.kw} · ${it.source || '언론사'} · ${ago(it.date)}`;
+          li.querySelector('button').addEventListener('click', async () => {
+            await api.openItem({ type: 'url', target: it.link });
+            api.readNews(it.link);
+          });
+          list.appendChild(li);
+        }
+        el.querySelector('.news-status').textContent = st.unread ? `안 읽은 기사 ${st.unread}건` : '모두 읽었습니다';
+      }
+      draw(await api.getNews());
+      window.__newsPanelDraw = draw;
+      el.querySelector('.readall').addEventListener('click', () => api.readNews('*'));
+      el.querySelector('.refresh').addEventListener('click', async (e) => {
+        e.target.disabled = true; el.querySelector('.news-status').textContent = '가져오는 중…';
+        await api.refreshNews(); e.target.disabled = false;
+      });
+    },
+  };
+
+  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory, webcapture, news };
+  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 전체 저장', news: '키워드 뉴스' };
 })();

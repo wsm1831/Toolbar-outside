@@ -9,13 +9,13 @@ Windows 11 화면 아래, 작업 표시줄 바로 위에 떠 있는 둥근 독(d
 | 위치 | 기능 |
 | --- | --- |
 | 검색엔진 | 네이버, 다음(카카오), 구글 |
-| AI | ChatGPT, Claude, Gemini, Microsoft Copilot, Perplexity, 뤼튼, NotebookLM, DeepL 번역 |
+| AI | ChatGPT, Claude, Gemini, Microsoft Copilot, Perplexity, 뤼튼, NotebookLM, DeepL 번역, GitHub, Netlify, Cloudflare |
 | 산업단지 | 한국산업단지공단, 산업입지정보시스템, 팩토리온 |
 | 행정·법령 | 법령(법제처, 국가법령정보센터, 자치법규정보시스템, 전자관보) → 토지·부동산(토지이음, 브이월드, 실거래가, 인터넷등기소) → 행정 서비스(정부24, 나라장터, 국가통계포털) → 부처(국토교통부, 산업통상부) |
 | 출장 | 카카오맵, 코레일, 오피넷, 티머니 고속·시외버스 |
 | 유틸리티 | 날짜 계산, 단위 환산(면적·길이), 금액 한글 표기, 텍스트 정리, 타이머·알람, 메모장, 맞춤법 검사, 번역 |
-| 툴바 바로가기 | 빠른 메모, 클립보드 기록, 계산기, 캡처 도구, **웹페이지 전체 저장**(주소를 넣으면 스크롤 아래쪽까지 PDF·PNG로 저장) |
-| 오른쪽 끝 | 시계, 날씨(지역은 설정에서 선택, 누르면 네이버 날씨), **녹색 불빛(화면 보호기 차단, 위)** 과 설정(아래) |
+| 툴바 바로가기 | 빠른 메모, 클립보드 기록, 계산기, 캡처 도구, **웹페이지 전체 저장**(스크롤 아래쪽까지 PDF·PNG 저장, 기사 본문만 복사), **키워드 뉴스**(30분마다 구글 뉴스 확인, 새 기사 수 표시·알림) |
+| 오른쪽 끝 | 시계, 날씨·미세먼지(지역은 설정에서 선택, 누르면 네이버 날씨), **녹색 불빛(화면 보호기 차단, 위)** 과 설정(아래) |
 
 - 금액 한글 표기의 공문서 형식은 「행정업무의 운영 및 혁신에 관한 규정 시행규칙」 제2조제2항을 따릅니다. 예: 금113,560원(금일십일만삼천오백육십원)
 - 기본 메뉴 구성이 바뀐 새 버전을 처음 실행하면, 기존 `config.json` 을 `config.v1-backup.json` 으로 보관하고 메뉴만 새 기본값으로 바꿉니다(투명도·녹색 불빛·공휴일 설정은 유지).
@@ -59,3 +59,5 @@ npm run dist         # Windows용 portable exe 만들기 → dist/
 - `scripts/build-icons.js` Lucide 아이콘 묶음 생성, `scripts/preview.js` 브라우저 미리보기 스크린샷
 
 아이콘: [Lucide](https://lucide.dev) (ISC License)
+
+본문 추출: [Mozilla Readability](https://github.com/mozilla/readability) (Apache License 2.0, `src/vendor/readability/`)

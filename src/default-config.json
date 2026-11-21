@@ -1,5 +1,5 @@
 {
-  "version": 14,
+  "version": 15,
   "appearance": {
     "idleOpacity": 0.35,
     "tileSize": 52
@@ -14,7 +14,17 @@
   },
   "weather": {
     "on": true,
-    "city": "서울"
+    "city": "서울",
+    "air": true
+  },
+  "news": {
+    "on": true,
+    "keywords": [
+      "산업단지",
+      "산단 개발",
+      "토지보상"
+    ],
+    "notify": true
   },
   "categories": [
     {
@@ -96,6 +106,24 @@
           "name": "DeepL 번역",
           "type": "url",
           "target": "https://www.deepl.com/translator"
+        },
+        {
+          "id": "github",
+          "name": "GitHub",
+          "type": "url",
+          "target": "https://github.com"
+        },
+        {
+          "id": "netlify",
+          "name": "Netlify",
+          "type": "url",
+          "target": "https://app.netlify.com"
+        },
+        {
+          "id": "cloudflare",
+          "name": "Cloudflare",
+          "type": "url",
+          "target": "https://dash.cloudflare.com"
         }
       ]
     },
@@ -372,6 +400,12 @@
           "name": "웹페이지 전체 저장",
           "type": "tool",
           "target": "webcapture"
+        },
+        {
+          "id": "news",
+          "name": "키워드 뉴스",
+          "type": "tool",
+          "target": "news"
         }
       ]
     }

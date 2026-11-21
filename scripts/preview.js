@@ -21,7 +21,13 @@ const mock = (cfg) => {
     clearClipHistory: async () => true, loadMemo: async () => '오후 3시 회의 자료 확인', saveMemo: async () => true,
     getAwake: async () => awake, toggleAwake: async () => { awake = { ...awake, on: !awake.on, enabled: !awake.on }; return awake; },
     onAwake: () => {},
-    getWeather: async () => ({ city: '서울', temp: 12.4, code: 2, isDay: true, max: 15, min: 4 }),
+    getWeather: async () => ({ city: '서울', temp: 12.4, code: 2, isDay: true, max: 15, min: 4, air: { pm10: 42, pm25: 21, grade: 1 } }),
+    getNews: async () => ({ on: true, unread: 3, keywords: ['산업단지', '산단 개발', '토지보상'], items: [
+      { link: 'a', title: '노후 산업단지 재생사업 공모 착수… 올해 5곳 선정', source: '테스트일보', kw: '산업단지', date: Date.now() - 20 * 60000, read: false },
+      { link: 'b', title: '스마트그린산단 확대, 입주기업 에너지 비용 절감 효과', source: '한국경제', kw: '산업단지', date: Date.now() - 90 * 60000, read: false },
+      { link: 'c', title: '공익사업 토지보상 기준 개선안 입법예고', source: '연합뉴스', kw: '토지보상', date: Date.now() - 5 * 3600000, read: false },
+      { link: 'd', title: '지역 산단 개발 계획 주민설명회 개최', source: '지역신문', kw: '산단 개발', date: Date.now() - 26 * 3600000, read: true }] }),
+    refreshNews: async () => {}, readNews: async () => true, onNews: () => {},
     weatherCities: async () => ['서울', '부산', '김천'], refreshWeather: async () => {}, onWeather: () => {},
     capturePage: async () => ({ ok: true, file: 'C:\\Users\\me\\Downloads\\기사_20261121.pdf' }),
     setSettingsDirty: () => {}, onSaveRequest: () => {}, closeSettings: () => {}, notify: () => {}, openSettings: () => {}, quit: () => {}, getLogin: async () => false, setLogin: async (v) => v,
@@ -85,6 +91,11 @@ const mock = (cfg) => {
   await page.click('#quick [data-qid="webcapture"]');
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/7b-webcapture.png` });
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  await page.click('#quick [data-qid="news"]');
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${out}/7c-news.png` });
   const errs = [];
   const sp = await browser.newPage({ viewport: { width: 1000, height: 680 }, deviceScaleFactor: 2, locale: 'ko-KR' });
   sp.on('pageerror', (e) => errs.push(e.message));

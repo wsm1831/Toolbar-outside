@@ -293,13 +293,18 @@
     $('#quiet-start').value = q.start;
     $('#quiet-end').value = q.end;
     $('#holidays').value = (cfg.holidays || []).join('\n');
-    const w = { on: true, city: '서울', ...(cfg.weather || {}) };
+    const w = { on: true, city: '서울', air: true, ...(cfg.weather || {}) };
     $('#weather-on').checked = w.on;
+    $('#weather-air').checked = w.air;
     const sel = $('#weather-city');
     if (!sel.options.length) {
       for (const name of await api.weatherCities()) sel.add(new Option(name, name));
     }
     sel.value = w.city;
+    const n = { on: true, keywords: ['산업단지', '산단 개발', '토지보상'], notify: true, ...(cfg.news || {}) };
+    $('#news-on').checked = n.on;
+    $('#news-notify').checked = n.notify;
+    $('#news-kw').value = n.keywords.join('\n');
     $('#login').checked = await api.getLogin();
   }
   $('#opacity').addEventListener('input', (e) => {
@@ -315,11 +320,22 @@
   };
   ['#quiet-on', '#quiet-start', '#quiet-end'].forEach((s) => $(s).addEventListener('change', quietSync));
   const weatherSync = () => {
-    cfg.weather = { on: $('#weather-on').checked, city: $('#weather-city').value };
+    cfg.weather = { on: $('#weather-on').checked, city: $('#weather-city').value, air: $('#weather-air').checked };
     markDirty();
   };
   $('#weather-on').addEventListener('change', weatherSync);
   $('#weather-city').addEventListener('change', weatherSync);
+  $('#weather-air').addEventListener('change', weatherSync);
+  const newsSync = () => {
+    cfg.news = {
+      on: $('#news-on').checked,
+      notify: $('#news-notify').checked,
+      keywords: $('#news-kw').value.split('\n').map((k) => k.trim()).filter(Boolean).slice(0, 10),
+    };
+    markDirty();
+  };
+  ['#news-on', '#news-notify'].forEach((q) => $(q).addEventListener('change', newsSync));
+  $('#news-kw').addEventListener('input', newsSync);
   $('#holidays').addEventListener('input', (e) => {
     cfg.holidays = e.target.value.split(/\s+/).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
     markDirty();

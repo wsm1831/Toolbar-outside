@@ -181,7 +181,26 @@
     }
     $('#sep-quick').hidden = !quick.children.length || !cats.children.length;
     $('#btn-settings').innerHTML = window.icon('settings', 16);
+    drawNewsBadge();
   }
+
+  // 키워드 뉴스: 안 읽은 기사 수를 해당 아이콘에 빨간 숫자로
+  let newsNow = { unread: 0 };
+  function drawNewsBadge() {
+    document.querySelectorAll('.tile .badge').forEach((b) => b.remove());
+    if (!newsNow.unread) return;
+    const tile = quick.querySelector('[data-qid="news"]') || dock.querySelector('.tile-cat[data-id="utils"]');
+    if (!tile) return;
+    const b = document.createElement('span');
+    b.className = 'badge';
+    b.textContent = newsNow.unread > 99 ? '99+' : newsNow.unread;
+    tile.appendChild(b);
+  }
+  api.onNews((st) => {
+    newsNow = st;
+    drawNewsBadge();
+    if (window.__newsPanelDraw && openTool === 'news') window.__newsPanelDraw(st);
+  });
 
   const catButton = (id) => dock.querySelector(`.tile-cat[data-id="${CSS.escape(id || '')}"]`);
   function markActive() {
@@ -357,7 +376,16 @@
     iconEl.innerHTML = window.icon(name, 18);
     iconEl.classList.toggle('cool', !['sun', 'cloud-sun'].includes(name));
     weatherBtn.querySelector('.w-temp').textContent = `${Math.round(st.temp)}°`;
-    weatherBtn.dataset.tip = `${st.city} ${text} · 최고 ${Math.round(st.max)}° / 최저 ${Math.round(st.min)}° · 누르면 자세히`;
+    const airEl = weatherBtn.querySelector('.w-air');
+    let airText = '';
+    if (st.air) {
+      const names = ['좋음', '보통', '나쁨', '매우나쁨'];
+      airEl.hidden = false;
+      airEl.className = `w-air g${st.air.grade}`;
+      airEl.textContent = names[st.air.grade];
+      airText = ` · 미세먼지 ${names[st.air.grade]} (PM10 ${st.air.pm10} / PM2.5 ${st.air.pm25}㎍/㎥)`;
+    } else airEl.hidden = true;
+    weatherBtn.dataset.tip = `${st.city} ${text} · 최고 ${Math.round(st.max)}° / 최저 ${Math.round(st.min)}°${airText} · 누르면 자세히`;
   }
   weatherBtn.addEventListener('click', async () => {
     if (!weatherNow) return;
@@ -389,6 +417,8 @@
     renderDock();
     renderAwake(await api.getAwake());
     renderWeather(await api.getWeather());
+    newsNow = await api.getNews();
+    drawNewsBadge();
   })();
   api.onConfigChanged((cfg) => {
     config = cfg;

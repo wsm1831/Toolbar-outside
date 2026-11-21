@@ -28,6 +28,10 @@ contextBridge.exposeInMainWorld('api', {
   saveMemo: (text) => ipcRenderer.invoke('memo:save', text),
 
   capturePage: (url, format) => ipcRenderer.invoke('capture:page', url, format),
+  getNews: () => ipcRenderer.invoke('news:get'),
+  refreshNews: () => ipcRenderer.invoke('news:refresh'),
+  readNews: (link) => ipcRenderer.invoke('news:read', link),
+  onNews: (cb) => ipcRenderer.on('news:update', (e, st) => cb(st)),
   getWeather: () => ipcRenderer.invoke('weather:get'),
   weatherCities: () => ipcRenderer.invoke('weather:cities'),
   refreshWeather: () => ipcRenderer.invoke('weather:refresh'),

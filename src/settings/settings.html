@@ -55,11 +55,18 @@
 
       <h2>날씨</h2>
       <label class="line check"><input id="weather-on" type="checkbox"> 시계 옆에 날씨 표시</label>
+      <label class="line check"><input id="weather-air" type="checkbox"> 미세먼지 등급도 표시 (환경부 기준: 좋음·보통·나쁨·매우나쁨)</label>
       <label class="line">
         <span>지역</span>
         <select id="weather-city"></select>
       </label>
       <p class="hint">30분마다 새로 가져옵니다. 날씨를 누르면 네이버 날씨가 열립니다.</p>
+
+      <h2>키워드 뉴스 알림</h2>
+      <label class="line check"><input id="news-on" type="checkbox"> 키워드 뉴스 가져오기 (30분마다, 구글 뉴스)</label>
+      <label class="line check"><input id="news-notify" type="checkbox"> 새 기사가 있으면 Windows 알림 띄우기</label>
+      <p class="hint">한 줄에 키워드 하나씩 적으세요. 띄어 쓰면 두 낱말이 모두 들어간 기사를 찾습니다.</p>
+      <textarea id="news-kw" rows="4" spellcheck="false" style="font-family:inherit"></textarea>
 
       <h2>화면 보호기 차단 (녹색 불빛)</h2>
       <label class="line check"><input id="quiet-on" type="checkbox"> 매일 소등 시간에는 자동으로 끄기</label>
