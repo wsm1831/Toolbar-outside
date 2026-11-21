@@ -83,6 +83,14 @@ function migrateConfig(cfg) {
     const col = utils ? utils.color : '#9C7CF0';
     next.categories = next.categories.map((c) => (c.pinned ? { ...c, color: col } : c));
   }
+  if (from < 14 && from >= 2) {
+    // v14: 'AI' 카테고리 추가(검색엔진 바로 다음)
+    if (!next.categories.some((c) => c.id === 'ai')) {
+      const ai = def.categories.find((c) => c.id === 'ai');
+      const at = next.categories.findIndex((c) => c.id === 'search');
+      next.categories.splice(at >= 0 ? at + 1 : 0, 0, ai);
+    }
+  }
   writeConfig(next);
   return next;
 }

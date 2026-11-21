@@ -2,7 +2,7 @@
 (() => {
   const api = window.api;
   const $ = (s) => document.querySelector(s);
-  const CAT_ICONS = ['globe', 'search', 'factory', 'train-front', 'car-front', 'map-pinned', 'wrench', 'folder', 'sparkles', 'star', 'briefcase', 'book-open', 'landmark', 'scale',
+  const CAT_ICONS = ['globe', 'search', 'bot', 'factory', 'train-front', 'car-front', 'map-pinned', 'wrench', 'folder', 'sparkles', 'star', 'briefcase', 'book-open', 'landmark', 'scale',
     'building-2', 'newspaper', 'map', 'mail', 'search', 'monitor', 'terminal', 'image', 'download', 'pencil', 'link',
     'layout-grid', 'house', 'activity', 'bell'];
   const COLORS = ['#4C9BEF', '#E9A23B', '#34B89A', '#9C7CF0', '#E5667A', '#5B6B8C', '#3FA7C9', '#C98A4B'];

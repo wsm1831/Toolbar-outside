@@ -1,5 +1,5 @@
 {
-  "version": 13,
+  "version": 14,
   "appearance": {
     "idleOpacity": 0.35,
     "tileSize": 52
@@ -40,6 +40,62 @@
           "name": "구글",
           "type": "url",
           "target": "https://www.google.com"
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "name": "AI",
+      "icon": "bot",
+      "color": "#3FA7C9",
+      "items": [
+        {
+          "id": "chatgpt",
+          "name": "ChatGPT",
+          "type": "url",
+          "target": "https://chatgpt.com"
+        },
+        {
+          "id": "claude",
+          "name": "Claude",
+          "type": "url",
+          "target": "https://claude.ai"
+        },
+        {
+          "id": "gemini",
+          "name": "Gemini",
+          "type": "url",
+          "target": "https://gemini.google.com"
+        },
+        {
+          "id": "copilot",
+          "name": "Microsoft Copilot",
+          "type": "url",
+          "target": "https://copilot.microsoft.com"
+        },
+        {
+          "id": "perplexity",
+          "name": "Perplexity (검색형 AI)",
+          "type": "url",
+          "target": "https://www.perplexity.ai"
+        },
+        {
+          "id": "wrtn",
+          "name": "뤼튼",
+          "type": "url",
+          "target": "https://wrtn.ai"
+        },
+        {
+          "id": "notebooklm",
+          "name": "NotebookLM (문서 요약·질문)",
+          "type": "url",
+          "target": "https://notebooklm.google.com"
+        },
+        {
+          "id": "deepl",
+          "name": "DeepL 번역",
+          "type": "url",
+          "target": "https://www.deepl.com/translator"
         }
       ]
     },
@@ -258,7 +314,8 @@
           "id": "notepad",
           "name": "메모장",
           "type": "app",
-          "target": "notepad.exe"
+          "target": "notepad.exe",
+          "icon": "builtin:notepad-text"
         },
         {
           "id": "speller",
