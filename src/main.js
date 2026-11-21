@@ -100,6 +100,13 @@ function migrateConfig(cfg) {
     const ai = next.categories.find((c) => c.id === 'ai');
     if (ai) for (const id of ['github', 'netlify', 'cloudflare']) if (!hasItem(id)) ai.items.push(defCat('ai').items.find((it) => it.id === id));
   }
+  if (from < 16 && from >= 2) {
+    // v16: 유틸리티에 '필지 조회' 추가
+    const has = next.categories.some((c) => c.items.some((it) => it.id === 'parcel'));
+    const utils = next.categories.find((c) => c.id === 'utils');
+    const item = def.categories.find((c) => c.id === 'utils').items.find((it) => it.id === 'parcel');
+    if (!has && utils && item) utils.items.unshift(item);
+  }
   writeConfig(next);
   return next;
 }
@@ -559,6 +566,69 @@ async function refreshNews() {
   }
 }
 
+// ---------- 필지 조회 (브이월드 오픈API) ----------
+// 인증키는 설정 창에서 입력해 이 PC의 설정 파일(config.json)에만 저장한다.
+const VW_DOMAIN = 'http://localhost';
+function vworldKey() {
+  const k = (config.keys && config.keys.vworld) || '';
+  if (!k) throw new Error('설정 → 일반 설정 → API 인증키에 브이월드 인증키를 넣어 주세요.');
+  return k;
+}
+async function vworldGet(pathAndQuery) {
+  const url = `https://api.vworld.kr${pathAndQuery}&key=${encodeURIComponent(vworldKey())}&domain=${encodeURIComponent(VW_DOMAIN)}&format=json&errorformat=json`;
+  const res = await fetchWithTimeout(url, 15000);
+  const j = await res.json().catch(() => null);
+  if (!j || !j.response) throw new Error(`브이월드 응답을 읽지 못했습니다 (HTTP ${res.status})`);
+  const r = j.response;
+  if (r.status === 'NOT_FOUND') return null;
+  if (r.status !== 'OK') throw new Error(`브이월드 오류: ${(r.error && (r.error.text || r.error.code)) || r.status}`);
+  return r;
+}
+async function vworldSearch(query) {
+  const q = encodeURIComponent(query.trim());
+  const base = `/req/search?service=search&request=search&version=2.0&crs=EPSG:4326&size=10&page=1&query=${q}`;
+  const out = [];
+  for (const [type, category] of [['address', 'parcel'], ['address', 'road'], ['place', null]]) {
+    const r = await vworldGet(`${base}&type=${type}${category ? `&category=${category}` : ''}`);
+    const items = (r && r.result && r.result.items) || [];
+    for (const it of items) {
+      const a = it.address || {};
+      out.push({
+        kind: type === 'place' ? '장소' : category === 'parcel' ? '지번' : '도로명',
+        title: type === 'place' ? (it.title || '') : (category === 'parcel' ? a.parcel : a.road) || '',
+        sub: type === 'place' ? (a.parcel || a.road || '') : (category === 'parcel' ? (a.road || '') : (a.parcel || '')),
+        pnu: category === 'parcel' ? it.id : null,
+        x: Number(it.point && it.point.x), y: Number(it.point && it.point.y),
+      });
+    }
+    if (out.length >= 10) break;
+  }
+  return out.slice(0, 15);
+}
+async function vworldFeature(layer, x, y, extra = '') {
+  const r = await vworldGet(`/req/data?service=data&request=GetFeature&version=2.0&data=${layer}&crs=EPSG:4326&geometry=false&size=10&page=1&geomFilter=${encodeURIComponent(`POINT(${x} ${y})`)}${extra}`);
+  const fc = r && r.result && r.result.featureCollection;
+  return (fc && fc.features ? fc.features : []).map((f) => f.properties || {});
+}
+async function vworldParcel(x, y) {
+  const info = { x, y, zones: [] };
+  // 연속지적도: PNU, 지번(지목 포함), 공시지가
+  const p = (await vworldFeature('LP_PA_CBND_BUBUN', x, y))[0];
+  if (p) {
+    info.pnu = p.pnu; info.addr = p.addr; info.jibun = p.jibun;
+    const jm = String(p.jibun || '').match(/([가-힣]+)$/); info.jimok = jm ? jm[1] : '';
+    if (p.jiga) info.jiga = Number(p.jiga);
+    if (p.gosi_year) info.gosi = `${p.gosi_year}년${p.gosi_month ? ` ${Number(p.gosi_month)}월` : ''}`;
+  }
+  // 용도지역 (도시·관리·농림·자연환경보전)
+  for (const layer of ['LT_C_UQ111', 'LT_C_UQ112', 'LT_C_UQ113', 'LT_C_UQ114']) {
+    try {
+      for (const z of await vworldFeature(layer, x, y)) if (z.uname && !info.zones.includes(z.uname)) info.zones.push(z.uname);
+    } catch { /* 레이어 하나 실패는 넘어감 */ }
+  }
+  return info;
+}
+
 // ---------- IPC ----------
 function registerIpc() {
   ipcMain.handle('config:get', () => config);
@@ -670,6 +740,12 @@ function registerIpc() {
 
   ipcMain.handle('capture:page', async (e, url, format) => {
     try { return await capturePage(String(url).trim(), format); } catch (err) { return { ok: false, message: err.message || String(err) }; }
+  });
+  ipcMain.handle('vworld:search', async (e, q) => {
+    try { return { ok: true, items: await vworldSearch(String(q)) }; } catch (err) { return { ok: false, message: err.message }; }
+  });
+  ipcMain.handle('vworld:parcel', async (e, x, y) => {
+    try { return { ok: true, info: await vworldParcel(Number(x), Number(y)) }; } catch (err) { return { ok: false, message: err.message }; }
   });
   ipcMain.handle('news:get', () => newsPublic());
   ipcMain.handle('news:refresh', () => refreshNews());

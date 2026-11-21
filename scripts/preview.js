@@ -27,6 +27,8 @@ const mock = (cfg) => {
       { link: 'b', title: '스마트그린산단 확대, 입주기업 에너지 비용 절감 효과', source: '한국경제', kw: '산업단지', date: Date.now() - 90 * 60000, read: false },
       { link: 'c', title: '공익사업 토지보상 기준 개선안 입법예고', source: '연합뉴스', kw: '토지보상', date: Date.now() - 5 * 3600000, read: false },
       { link: 'd', title: '지역 산단 개발 계획 주민설명회 개최', source: '지역신문', kw: '산단 개발', date: Date.now() - 26 * 3600000, read: true }] }),
+    vworldSearch: async () => ({ ok: true, items: [{ kind: '지번', title: '경상북도 김천시 율곡동 1052', sub: '경상북도 김천시 혁신8로 77', x: 128.1747, y: 36.1076 }] }),
+    vworldParcel: async () => ({ ok: true, info: { x: 128.1747, y: 36.1076, zones: ['일반상업지역'], pnu: '4715010700110520000', addr: '경상북도 김천시 율곡동 1052', jibun: '1052 대', jimok: '대', jiga: 1234000, gosi: '2026년 1월' } }),
     refreshNews: async () => {}, readNews: async () => true, onNews: () => {},
     weatherCities: async () => ['서울', '부산', '김천'], refreshWeather: async () => {}, onWeather: () => {},
     capturePage: async () => ({ ok: true, file: 'C:\\Users\\me\\Downloads\\기사_20261121.pdf' }),
@@ -57,7 +59,7 @@ const mock = (cfg) => {
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${out}/${i}-${id}-tip.png` });
   }
-  await page.click('#pop .tile >> nth=2'); // 금액 한글 표기
+  await page.click('#pop .tile >> nth=3'); // 금액 한글 표기
   await page.waitForTimeout(400);
   await page.fill('#km-in', '113560');
   await page.waitForTimeout(200);
@@ -65,7 +67,7 @@ const mock = (cfg) => {
   console.log('money:', await page.$$eval('.money-row .mv', (e) => e.map((x) => x.textContent)));
   await page.click('.panel .back');
   await page.waitForTimeout(500);
-  await page.click('#pop .tile >> nth=1'); // 단위 환산
+  await page.click('#pop .tile >> nth=2'); // 단위 환산
   await page.waitForTimeout(400);
   await page.fill('.unit-row:nth-child(2) input', '1000');
   await page.dispatchEvent('.unit-row:nth-child(2) input', 'input');
@@ -74,7 +76,7 @@ const mock = (cfg) => {
   console.log('units:', await page.$$eval('.unit-row input', (e) => e.map((x) => x.value)));
   await page.click('.panel .back');
   await page.waitForTimeout(500);
-  await page.click('#pop .tile >> nth=0'); // 날짜 계산
+  await page.click('#pop .tile >> nth=1'); // 날짜 계산
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/5-datecalc.png` });
   await page.click('.seg button[data-m="deadline"]');
@@ -96,6 +98,18 @@ const mock = (cfg) => {
   await page.click('#quick [data-qid="news"]');
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/7c-news.png` });
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  await page.click('.tile-cat[data-id="utils"]');
+  await page.waitForTimeout(600);
+  await page.click('#pop .tile >> nth=0');
+  await page.waitForTimeout(300);
+  await page.fill('#pc-q', '율곡동 1052');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(300);
+  await page.click('.pc-list button');
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${out}/7d-parcel.png` });
   const errs = [];
   const sp = await browser.newPage({ viewport: { width: 1000, height: 680 }, deviceScaleFactor: 2, locale: 'ko-KR' });
   sp.on('pageerror', (e) => errs.push(e.message));

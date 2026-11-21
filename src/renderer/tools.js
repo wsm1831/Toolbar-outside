@@ -569,6 +569,62 @@
     },
   };
 
-  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory, webcapture, news };
-  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 전체 저장', news: '키워드 뉴스' };
+  // ---------- 필지 조회 (브이월드) ----------
+  const won = (n) => `${Math.round(n).toLocaleString('ko-KR')}원`;
+  const parcel = {
+    icon: 'land-plot',
+    render(el, { api }) {
+      el.append(h(`
+        <div class="field"><label for="pc-q">주소·지번·장소명</label>
+          <div style="display:flex;gap:6px"><input id="pc-q" type="text" placeholder="예: 김천시 율곡동 1052 / 구미국가산업단지" autocomplete="off"><button class="btn go">찾기</button></div>
+        </div>
+        <ul class="cliplist pc-list"></ul>
+        <div class="pc-detail"></div>
+        <p class="muted pc-status" style="margin:6px 0 0" aria-live="polite"></p>`));
+      const q = el.querySelector('#pc-q'); const list = el.querySelector('.pc-list');
+      const detail = el.querySelector('.pc-detail'); const status = el.querySelector('.pc-status');
+      q.focus();
+      async function search() {
+        if (!q.value.trim()) return;
+        status.textContent = '찾는 중…'; list.innerHTML = ''; detail.innerHTML = '';
+        const r = await api.vworldSearch(q.value);
+        if (!r.ok) { status.textContent = r.message; return; }
+        if (!r.items.length) { status.textContent = '찾은 결과가 없습니다. 시·군 이름을 붙이거나 다르게 적어 보세요.'; return; }
+        status.textContent = `${r.items.length}건 · 누르면 토지 정보를 봅니다`;
+        for (const it of r.items) {
+          const li = document.createElement('li'); const b = document.createElement('button');
+          b.textContent = `[${it.kind}] ${it.title}${it.sub ? `\n${it.sub}` : ''}`;
+          b.addEventListener('click', () => show(it));
+          li.appendChild(b); list.appendChild(li);
+        }
+      }
+      async function show(it) {
+        status.textContent = '토지 정보를 가져오는 중…';
+        const r = await api.vworldParcel(it.x, it.y);
+        if (!r.ok) { status.textContent = r.message; return; }
+        const d = r.info; list.innerHTML = '';
+        const rows = [
+          ['소재지', d.addr || it.title], ['지번', d.jibun || '-'], ['지목', d.jimok || '-'],
+          ['용도지역', d.zones.length ? d.zones.join(', ') : '-'],
+          ['공시지가', d.jiga ? `${won(d.jiga)}/㎡${d.gosi ? ` (${d.gosi})` : ''}` : '-'],
+          ['PNU', d.pnu || '-'], ['좌표', `${d.y.toFixed(6)}, ${d.x.toFixed(6)}`],
+        ];
+        detail.innerHTML = '<div class="result pc-table"></div><div class="actions"><button class="btn ghost back2">다른 결과</button><button class="btn ghost map">카카오맵</button><button class="btn copy">정보 복사</button></div>';
+        const t = detail.querySelector('.pc-table');
+        for (const [k, v] of rows) { const row = document.createElement('div'); row.className = 'pc-row'; row.innerHTML = '<span></span><span></span>'; row.children[0].textContent = k; row.children[1].textContent = v; t.appendChild(row); }
+        status.textContent = '용도지역은 도시·관리·농림·자연환경보전지역 기준입니다. 지구·구역 등 자세한 내용은 토지이음에서 확인하세요.';
+        detail.querySelector('.copy').addEventListener('click', async () => {
+          await api.writeClipboard(rows.map(([k, v]) => `${k}: ${v}`).join('\n'));
+          window.showToast('토지 정보를 복사했습니다', true);
+        });
+        detail.querySelector('.map').addEventListener('click', () => api.openItem({ type: 'url', target: `https://map.kakao.com/link/map/${encodeURIComponent(d.addr || it.title)},${d.y},${d.x}` }));
+        detail.querySelector('.back2').addEventListener('click', search);
+      }
+      el.querySelector('.go').addEventListener('click', search);
+      q.addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+    },
+  };
+
+  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory, webcapture, news, parcel };
+  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 전체 저장', news: '키워드 뉴스', parcel: '필지 조회' };
 })();

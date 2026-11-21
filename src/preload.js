@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('api', {
   saveMemo: (text) => ipcRenderer.invoke('memo:save', text),
 
   capturePage: (url, format) => ipcRenderer.invoke('capture:page', url, format),
+  vworldSearch: (q) => ipcRenderer.invoke('vworld:search', q),
+  vworldParcel: (x, y) => ipcRenderer.invoke('vworld:parcel', x, y),
   getNews: () => ipcRenderer.invoke('news:get'),
   refreshNews: () => ipcRenderer.invoke('news:refresh'),
   readNews: (link) => ipcRenderer.invoke('news:read', link),

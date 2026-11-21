@@ -202,3 +202,5 @@ footer {
 .item.drop-before, .cat-row.drop-before { box-shadow: 0 -3px 0 var(--accent); }
 .item.drop-after, .cat-row.drop-after { box-shadow: 0 3px 0 var(--accent); }
 .cat-row { border-radius: 8px; }
+
+.keybox { width: 320px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font-family: Consolas, monospace; }

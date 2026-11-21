@@ -305,6 +305,7 @@
     $('#news-on').checked = n.on;
     $('#news-notify').checked = n.notify;
     $('#news-kw').value = n.keywords.join('\n');
+    $('#key-vworld').value = (cfg.keys && cfg.keys.vworld) || '';
     $('#login').checked = await api.getLogin();
   }
   $('#opacity').addEventListener('input', (e) => {
@@ -336,6 +337,15 @@
   };
   ['#news-on', '#news-notify'].forEach((q) => $(q).addEventListener('change', newsSync));
   $('#news-kw').addEventListener('input', newsSync);
+  $('#key-vworld').addEventListener('input', (e) => {
+    cfg.keys = { ...(cfg.keys || {}), vworld: e.target.value.trim() };
+    markDirty();
+  });
+  document.querySelectorAll('.keyshow').forEach((b) => b.addEventListener('click', () => {
+    const inp = document.getElementById(b.dataset.for);
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    b.textContent = inp.type === 'password' ? '보기' : '숨기기';
+  }));
   $('#holidays').addEventListener('input', (e) => {
     cfg.holidays = e.target.value.split(/\s+/).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
     markDirty();

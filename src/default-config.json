@@ -1,5 +1,5 @@
 {
-  "version": 15,
+  "version": 16,
   "appearance": {
     "idleOpacity": 0.35,
     "tileSize": 52
@@ -25,6 +25,11 @@
       "토지보상"
     ],
     "notify": true
+  },
+  "keys": {
+    "vworld": "",
+    "lawOC": "",
+    "dataGoKr": ""
   },
   "categories": [
     {
@@ -308,6 +313,12 @@
       "icon": "sparkles",
       "color": "#9C7CF0",
       "items": [
+        {
+          "id": "parcel",
+          "name": "필지 조회",
+          "type": "tool",
+          "target": "parcel"
+        },
         {
           "id": "datecalc",
           "name": "날짜 계산",
