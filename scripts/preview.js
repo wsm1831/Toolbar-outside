@@ -35,6 +35,7 @@ const mock = (cfg) => {
         { name: '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률', kind: '일부개정', prom: '20260310', enf: '20260911', mst: '2' },
         { name: '산업입지 및 개발에 관한 법률', kind: '일부개정', prom: '20261120', enf: '20270521', mst: '1' },
         { name: '산업입지 및 개발에 관한 법률 시행령', kind: '일부개정', prom: '20250301', enf: '20250701', mst: '3' }] }),
+    getHolidays: async () => ({ dates: ['2026-11-23'], names: {}, years: [2026, 2027], updatedAt: Date.now() }), refreshHolidays: async () => ({ dates: [], years: [], updatedAt: 0 }),
     refreshLaws: async () => {}, readLaws: async () => true, onLaws: () => {},
     refreshNews: async () => {}, readNews: async () => true, onNews: () => {},
     weatherCities: async () => ['서울', '부산', '김천'], refreshWeather: async () => {}, onWeather: () => {},

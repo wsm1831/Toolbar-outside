@@ -307,6 +307,8 @@
     $('#news-kw').value = n.keywords.join('\n');
     $('#key-vworld').value = (cfg.keys && cfg.keys.vworld) || '';
     $('#key-law').value = (cfg.keys && cfg.keys.lawOC) || '';
+    $('#key-data').value = (cfg.keys && cfg.keys.dataGoKr) || '';
+    showHol(await api.getHolidays());
     const L = { on: true, notify: true, items: ['산업입지 및 개발에 관한 법률', '산업집적활성화 및 공장설립에 관한 법률', '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률', '국토의 계획 및 이용에 관한 법률'], ...(cfg.laws || {}) };
     $('#laws-on').checked = L.on;
     $('#laws-notify').checked = L.notify;
@@ -345,6 +347,21 @@
   $('#key-vworld').addEventListener('input', (e) => {
     cfg.keys = { ...(cfg.keys || {}), vworld: e.target.value.trim() };
     markDirty();
+  });
+  $('#key-data').addEventListener('input', (e) => {
+    cfg.keys = { ...(cfg.keys || {}), dataGoKr: e.target.value.trim() };
+    markDirty();
+  });
+  function showHol(h) {
+    const el = $('#hol-status');
+    if (h && h.updatedAt) {
+      el.textContent = `자동 공휴일 ${h.dates.length}일 (${h.years.join('·')}년, ${new Date(h.updatedAt).toLocaleDateString('ko-KR')} 갱신)${h.error ? ` · ${h.error}` : ''}`;
+    } else el.textContent = h && h.error ? h.error : '자동 공휴일을 아직 받지 않았습니다.';
+  }
+  $('#hol-refresh').addEventListener('click', async (e) => {
+    if (dirty) { $('#hol-status').textContent = '먼저 저장을 눌러 인증키를 저장해 주세요.'; return; }
+    e.target.disabled = true; $('#hol-status').textContent = '받는 중…';
+    showHol(await api.refreshHolidays(true)); e.target.disabled = false;
   });
   $('#key-law').addEventListener('input', (e) => {
     cfg.keys = { ...(cfg.keys || {}), lawOC: e.target.value.trim() };

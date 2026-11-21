@@ -696,6 +696,57 @@ async function refreshLaws() {
   }
 }
 
+// ---------- 공휴일 자동 갱신 (공공데이터포털 한국천문연구원 특일 정보) ----------
+const HOL_FILE = () => userFile('holidays.json');
+let holState = null; // { dates: ['2026-01-01', ...], names: { '2026-01-01': '1월1일' }, years: [2026, 2027], updatedAt, error }
+function loadHol() {
+  if (holState) return holState;
+  try { holState = JSON.parse(fs.readFileSync(HOL_FILE(), 'utf8')); } catch { holState = { dates: [], names: {}, years: [], updatedAt: 0 }; }
+  return holState;
+}
+async function fetchHolidayYear(key, year) {
+  const q = `getRestDeInfo?serviceKey=${encodeURIComponent(key)}&solYear=${year}&numOfRows=100&_type=json`;
+  let res;
+  try { res = await fetchWithTimeout(`https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/${q}`, 15000); }
+  catch { res = await fetchWithTimeout(`http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/${q}`, 15000); }
+  const text = await res.text();
+  let j; try { j = JSON.parse(text); } catch {
+    const msg = (text.match(/<returnAuthMsg>([^<]+)/) || text.match(/<resultMsg>([^<]+)/) || [])[1];
+    throw new Error(msg ? `공공데이터포털: ${msg}` : `응답을 읽지 못했습니다 (HTTP ${res.status})`);
+  }
+  const head = j.response && j.response.header;
+  if (head && head.resultCode !== '00') throw new Error(`공공데이터포털: ${head.resultMsg || head.resultCode}`);
+  let items = j.response && j.response.body && j.response.body.items && j.response.body.items.item;
+  if (!items) return [];
+  if (!Array.isArray(items)) items = [items];
+  return items.filter((i) => i.isHoliday === 'Y').map((i) => {
+    const d = String(i.locdate);
+    return { date: `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`, name: i.dateName || '' };
+  });
+}
+async function refreshHolidays(force) {
+  const st = loadHol();
+  const key = (config.keys && config.keys.dataGoKr) || '';
+  if (!key) { st.error = '설정 → 일반 설정 → API 인증키에 공공데이터포털 인증키를 넣어 주세요.'; return st; }
+  const y = new Date().getFullYear();
+  if (!force && st.updatedAt > Date.now() - 7 * 86400000 && st.years.includes(y)) return st;
+  const dates = new Set(st.dates.filter((d) => Number(d.slice(0, 4)) < y)); // 지난 해 기록은 남겨 둔다
+  const names = { ...st.names }; const years = [];
+  st.error = '';
+  for (const year of [y, y + 1]) {
+    try {
+      const list = await fetchHolidayYear(key, year);
+      if (list.length) years.push(year);
+      for (const h of list) { dates.add(h.date); names[h.date] = h.name; }
+    } catch (err) { st.error = err.message; }
+  }
+  if (years.length) {
+    st.dates = [...dates].sort(); st.names = names; st.years = years; st.updatedAt = Date.now();
+    fs.writeFile(HOL_FILE(), JSON.stringify(st), () => {});
+  }
+  return st;
+}
+
 // ---------- IPC ----------
 function registerIpc() {
   ipcMain.handle('config:get', () => config);
@@ -703,12 +754,14 @@ function registerIpc() {
   ipcMain.handle('config:save', (e, cfg) => {
     const before = JSON.stringify(weatherCfg()); // 바꾸기 전 날씨 설정
     const newsBefore = JSON.stringify(newsCfg());
+    const holKeyBefore = config.keys && config.keys.dataGoKr;
     const lawsBefore = JSON.stringify([lawsCfg(), config.keys && config.keys.lawOC]);
     config = cfg;
     writeConfig(cfg);
     applyAwake();
     if (JSON.stringify(weatherCfg()) !== before) refreshWeather();
     if (JSON.stringify(newsCfg()) !== newsBefore) refreshNews();
+    if ((cfg.keys && cfg.keys.dataGoKr) && (cfg.keys.dataGoKr !== holKeyBefore)) refreshHolidays(true);
     if (JSON.stringify([lawsCfg(), config.keys && config.keys.lawOC]) !== lawsBefore) refreshLaws();
     if (dockWin) dockWin.webContents.send('config:changed', cfg);
     return true;
@@ -816,6 +869,8 @@ function registerIpc() {
   ipcMain.handle('vworld:parcel', async (e, x, y) => {
     try { return { ok: true, info: await vworldParcel(Number(x), Number(y)) }; } catch (err) { return { ok: false, message: err.message }; }
   });
+  ipcMain.handle('holidays:get', () => loadHol());
+  ipcMain.handle('holidays:refresh', (e, force) => refreshHolidays(!!force));
   ipcMain.handle('laws:get', () => lawsPublic());
   ipcMain.handle('laws:refresh', () => refreshLaws());
   ipcMain.handle('laws:read', () => { const st = loadLaws(); st.events.forEach((e) => { e.read = true; }); saveLaws(); sendLaws(); return true; });
@@ -876,6 +931,8 @@ if (!app.requestSingleInstanceLock(instanceInfo)) {
     setInterval(refreshWeather, 30 * 60 * 1000);
     setTimeout(refreshNews, 8000);
     setTimeout(refreshLaws, 20000);
+    setTimeout(() => refreshHolidays(false), 12000);
+    setInterval(() => refreshHolidays(false), 24 * 60 * 60 * 1000);
     setInterval(refreshLaws, 6 * 60 * 60 * 1000);
     setInterval(refreshNews, 30 * 60 * 1000);
     powerMonitor.on('resume', () => { setTimeout(refreshWeather, 5000); setTimeout(refreshNews, 15000); });

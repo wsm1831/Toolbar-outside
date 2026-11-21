@@ -78,6 +78,7 @@
       <p class="hint">인증키는 이 PC의 설정 파일에만 저장됩니다. 다른 사람에게 설정 파일을 줄 때는 지우고 주세요.</p>
       <label class="line"><span>브이월드</span><input id="key-vworld" type="password" class="keybox" autocomplete="off" spellcheck="false" placeholder="필지 조회에 사용"><button type="button" class="ghost keyshow" data-for="key-vworld">보기</button></label>
       <label class="line"><span>국가법령정보 OC</span><input id="key-law" type="password" class="keybox" autocomplete="off" spellcheck="false" placeholder="법령 개정 알림에 사용"><button type="button" class="ghost keyshow" data-for="key-law">보기</button></label>
+      <label class="line"><span>공공데이터포털</span><input id="key-data" type="password" class="keybox" autocomplete="off" spellcheck="false" placeholder="공휴일 자동 갱신에 사용 (일반 인증키 Decoding)"><button type="button" class="ghost keyshow" data-for="key-data">보기</button></label>
 
       <h2>화면 보호기 차단 (녹색 불빛)</h2>
       <label class="line check"><input id="quiet-on" type="checkbox"> 매일 소등 시간에는 자동으로 끄기</label>
@@ -91,7 +92,8 @@
       <label class="line check"><input id="login" type="checkbox"> Windows를 켤 때 자동으로 실행</label>
 
       <h2>공휴일</h2>
-      <p class="hint">날짜 계산(영업일)에 쓰입니다. 한 줄에 하나씩 2026-05-05 형식으로 적으세요. 2027년은 미리 넣어 둔 값이라 확인이 필요합니다.</p>
+      <div class="line"><span id="hol-status" class="hint" style="margin:0"></span><button id="hol-refresh" type="button" class="ghost">지금 갱신</button></div>
+      <p class="hint">공공데이터포털 인증키가 있으면 올해·내년 공휴일(대체공휴일 포함)을 자동으로 받습니다. 아래에는 그 밖에 쉬는 날(예: 노동절, 기관 휴무일)을 한 줄에 하나씩 2026-05-01 형식으로 적으세요.</p>
       <textarea id="holidays" rows="8" spellcheck="false"></textarea>
 
       <h2>설정 파일</h2>

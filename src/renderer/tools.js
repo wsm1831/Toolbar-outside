@@ -43,8 +43,13 @@
   let dateMode = 'dday';
   const datecalc = {
     icon: 'calendar-days',
-    render(el, { config }) {
-      const holidays = new Set(config.holidays || []);
+    async render(el, { config, api }) {
+      // 공휴일 = 공공데이터포털에서 자동으로 받은 날 + 설정에 직접 적은 날
+      const auto = await api.getHolidays();
+      const holidays = new Set([...(config.holidays || []), ...((auto && auto.dates) || [])]);
+      const holNote = auto && auto.updatedAt
+        ? `공휴일: 공공데이터포털 자동 갱신(${new Date(auto.updatedAt).toLocaleDateString('ko-KR')}) + 설정에 직접 넣은 날`
+        : '공휴일: 설정에 직접 넣은 날만 반영 중 (공공데이터포털 인증키를 넣으면 자동 갱신)';
       const isOff = (d) => d.getDay() === 0 || d.getDay() === 6 || holidays.has(ymd(d));
       const nextWorkday = (d) => { let x = d; while (isOff(x)) x = addDays(x, 1); return x; };
       const workdaysBetween = (a, b) => { // a 다음 날부터 b까지
@@ -81,7 +86,8 @@
           </div>
         </div>
         <div class="result" aria-live="polite"><div class="big"></div><div class="sub"></div></div>
-        <p class="muted" style="margin:8px 0 0">공휴일은 설정 화면에서 고칠 수 있습니다.</p>`));
+        <p class="muted hol-note" style="margin:8px 0 0"></p>`));
+      el.querySelector('.hol-note').textContent = holNote;
 
       const big = el.querySelector('.big');
       const sub = el.querySelector('.sub');

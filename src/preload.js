@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('api', {
   capturePage: (url, format) => ipcRenderer.invoke('capture:page', url, format),
   vworldSearch: (q) => ipcRenderer.invoke('vworld:search', q),
   vworldParcel: (x, y) => ipcRenderer.invoke('vworld:parcel', x, y),
+  getHolidays: () => ipcRenderer.invoke('holidays:get'),
+  refreshHolidays: (force) => ipcRenderer.invoke('holidays:refresh', force),
   getLaws: () => ipcRenderer.invoke('laws:get'),
   refreshLaws: () => ipcRenderer.invoke('laws:refresh'),
   readLaws: () => ipcRenderer.invoke('laws:read'),
