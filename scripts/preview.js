@@ -29,6 +29,13 @@ const mock = (cfg) => {
       { link: 'd', title: '지역 산단 개발 계획 주민설명회 개최', source: '지역신문', kw: '산단 개발', date: Date.now() - 26 * 3600000, read: true }] }),
     vworldSearch: async () => ({ ok: true, items: [{ kind: '지번', title: '경상북도 김천시 율곡동 1052', sub: '경상북도 김천시 혁신8로 77', x: 128.1747, y: 36.1076 }] }),
     vworldParcel: async () => ({ ok: true, info: { x: 128.1747, y: 36.1076, zones: ['일반상업지역'], pnu: '4715010700110520000', addr: '경상북도 김천시 율곡동 1052', jibun: '1052 대', jimok: '대', jiga: 1234000, gosi: '2026년 1월' } }),
+    getLaws: async () => ({ on: true, unread: 1, checkedAt: Date.now(), error: '',
+      events: [{ name: '산업입지 및 개발에 관한 법률', kind: '일부개정', prom: '20261120', enf: '20270521', mst: '1', read: false }],
+      watched: [
+        { name: '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률', kind: '일부개정', prom: '20260310', enf: '20260911', mst: '2' },
+        { name: '산업입지 및 개발에 관한 법률', kind: '일부개정', prom: '20261120', enf: '20270521', mst: '1' },
+        { name: '산업입지 및 개발에 관한 법률 시행령', kind: '일부개정', prom: '20250301', enf: '20250701', mst: '3' }] }),
+    refreshLaws: async () => {}, readLaws: async () => true, onLaws: () => {},
     refreshNews: async () => {}, readNews: async () => true, onNews: () => {},
     weatherCities: async () => ['서울', '부산', '김천'], refreshWeather: async () => {}, onWeather: () => {},
     capturePage: async () => ({ ok: true, file: 'C:\\Users\\me\\Downloads\\기사_20261121.pdf' }),
@@ -110,6 +117,11 @@ const mock = (cfg) => {
   await page.click('.pc-list button');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${out}/7d-parcel.png` });
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  await page.click('#quick [data-qid="laws"]');
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${out}/7e-laws.png` });
   const errs = [];
   const sp = await browser.newPage({ viewport: { width: 1000, height: 680 }, deviceScaleFactor: 2, locale: 'ko-KR' });
   sp.on('pageerror', (e) => errs.push(e.message));

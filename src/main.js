@@ -107,6 +107,13 @@ function migrateConfig(cfg) {
     const item = def.categories.find((c) => c.id === 'utils').items.find((it) => it.id === 'parcel');
     if (!has && utils && item) utils.items.unshift(item);
   }
+  if (from < 17 && from >= 2) {
+    // v17: 툴바 바로가기에 '법령 개정 알림' 추가
+    const pinned = next.categories.find((c) => c.pinned);
+    const has = next.categories.some((c) => c.items.some((it) => it.id === 'laws'));
+    const item = def.categories.find((c) => c.pinned).items.find((it) => it.id === 'laws');
+    if (pinned && !has && item) pinned.items.push(item);
+  }
   writeConfig(next);
   return next;
 }
@@ -629,6 +636,66 @@ async function vworldParcel(x, y) {
   return info;
 }
 
+// ---------- 관심 법령 개정 알림 (국가법령정보 공동활용 API) ----------
+// 법률 이름을 넣으면 그 법의 시행령·시행규칙까지 함께 본다. OC 값은 설정 창에서 입력.
+const LAWS_FILE = () => userFile('laws.json');
+let lawsState = null; // { known: { 법령명: { mst, prom, enf, kind } }, events: [...], checkedAt, error }
+const DEFAULT_LAWS = ['산업입지 및 개발에 관한 법률', '산업집적활성화 및 공장설립에 관한 법률', '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률', '국토의 계획 및 이용에 관한 법률'];
+function lawsCfg() { return { on: true, notify: true, items: DEFAULT_LAWS, ...(config.laws || {}) }; }
+function loadLaws() {
+  if (lawsState) return lawsState;
+  try { lawsState = JSON.parse(fs.readFileSync(LAWS_FILE(), 'utf8')); } catch { lawsState = { known: {}, events: [] }; }
+  return lawsState;
+}
+function saveLaws() { fs.writeFile(LAWS_FILE(), JSON.stringify(lawsState), () => {}); }
+const squash = (t) => String(t || '').replace(/\s+/g, '');
+function lawsPublic() {
+  const st = loadLaws(); const cfg = lawsCfg();
+  const watched = Object.entries(st.known).map(([name, v]) => ({ name, ...v }))
+    .filter((l) => cfg.items.some((w) => squash(l.name).startsWith(squash(w))))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  return { on: cfg.on, events: st.events, unread: st.events.filter((e) => !e.read).length, watched, checkedAt: st.checkedAt || 0, error: st.error || '' };
+}
+function sendLaws() { if (dockWin && !dockWin.isDestroyed()) dockWin.webContents.send('laws:update', lawsPublic()); }
+async function refreshLaws() {
+  const cfg = lawsCfg(); const st = loadLaws();
+  const oc = (config.keys && config.keys.lawOC) || '';
+  if (!cfg.on) { sendLaws(); return; }
+  if (!oc) { st.error = '설정 → 일반 설정 → API 인증키에 국가법령정보 OC 값을 넣어 주세요.'; sendLaws(); return; }
+  const fresh = []; let anyOk = false; st.error = '';
+  for (const name of cfg.items) {
+    try {
+      const url = `https://www.law.go.kr/DRF/lawSearch.do?OC=${encodeURIComponent(oc)}&target=law&type=JSON&display=100&query=${encodeURIComponent(name)}`;
+      const res = await fetchWithTimeout(url, 15000);
+      const text = await res.text();
+      let j; try { j = JSON.parse(text); } catch { throw new Error(text.slice(0, 120).replace(/<[^>]+>/g, ' ').trim() || `HTTP ${res.status}`); }
+      let list = (j.LawSearch && j.LawSearch.law) || [];
+      if (!Array.isArray(list)) list = [list];
+      anyOk = true;
+      for (const l of list) {
+        const lname = l['법령명한글'];
+        if (!lname || !squash(lname).startsWith(squash(name))) continue; // 시행령·시행규칙 포함, 다른 법은 제외
+        const cur = { mst: String(l['법령일련번호'] || ''), prom: String(l['공포일자'] || ''), enf: String(l['시행일자'] || ''), kind: l['제개정구분명'] || '', dept: l['소관부처명'] || '' };
+        const old = st.known[lname];
+        if (old && old.mst && cur.mst && old.mst !== cur.mst) {
+          fresh.push({ name: lname, ...cur, at: Date.now(), read: false });
+        }
+        st.known[lname] = cur;
+      }
+    } catch (err) { st.error = `법령 정보를 가져오지 못했습니다: ${err.message}`; }
+  }
+  if (anyOk) st.checkedAt = Date.now();
+  st.events = [...fresh, ...(st.events || [])].slice(0, 50);
+  saveLaws(); sendLaws();
+  if (cfg.notify && fresh.length && Notification.isSupported()) {
+    new Notification({
+      title: `법령 개정 ${fresh.length}건`,
+      body: fresh.slice(0, 3).map((e) => `${e.name} (${e.kind || '개정'}, 시행 ${e.enf.replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3')})`).join('\n'),
+      icon: ICON_PATH,
+    }).show();
+  }
+}
+
 // ---------- IPC ----------
 function registerIpc() {
   ipcMain.handle('config:get', () => config);
@@ -636,11 +703,13 @@ function registerIpc() {
   ipcMain.handle('config:save', (e, cfg) => {
     const before = JSON.stringify(weatherCfg()); // 바꾸기 전 날씨 설정
     const newsBefore = JSON.stringify(newsCfg());
+    const lawsBefore = JSON.stringify([lawsCfg(), config.keys && config.keys.lawOC]);
     config = cfg;
     writeConfig(cfg);
     applyAwake();
     if (JSON.stringify(weatherCfg()) !== before) refreshWeather();
     if (JSON.stringify(newsCfg()) !== newsBefore) refreshNews();
+    if (JSON.stringify([lawsCfg(), config.keys && config.keys.lawOC]) !== lawsBefore) refreshLaws();
     if (dockWin) dockWin.webContents.send('config:changed', cfg);
     return true;
   });
@@ -747,6 +816,9 @@ function registerIpc() {
   ipcMain.handle('vworld:parcel', async (e, x, y) => {
     try { return { ok: true, info: await vworldParcel(Number(x), Number(y)) }; } catch (err) { return { ok: false, message: err.message }; }
   });
+  ipcMain.handle('laws:get', () => lawsPublic());
+  ipcMain.handle('laws:refresh', () => refreshLaws());
+  ipcMain.handle('laws:read', () => { const st = loadLaws(); st.events.forEach((e) => { e.read = true; }); saveLaws(); sendLaws(); return true; });
   ipcMain.handle('news:get', () => newsPublic());
   ipcMain.handle('news:refresh', () => refreshNews());
   ipcMain.handle('news:read', (e, link) => {
@@ -803,6 +875,8 @@ if (!app.requestSingleInstanceLock(instanceInfo)) {
     refreshWeather();
     setInterval(refreshWeather, 30 * 60 * 1000);
     setTimeout(refreshNews, 8000);
+    setTimeout(refreshLaws, 20000);
+    setInterval(refreshLaws, 6 * 60 * 60 * 1000);
     setInterval(refreshNews, 30 * 60 * 1000);
     powerMonitor.on('resume', () => { setTimeout(refreshWeather, 5000); setTimeout(refreshNews, 15000); });
     screen.on('display-metrics-changed', placeDock);

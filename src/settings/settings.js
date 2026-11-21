@@ -306,6 +306,11 @@
     $('#news-notify').checked = n.notify;
     $('#news-kw').value = n.keywords.join('\n');
     $('#key-vworld').value = (cfg.keys && cfg.keys.vworld) || '';
+    $('#key-law').value = (cfg.keys && cfg.keys.lawOC) || '';
+    const L = { on: true, notify: true, items: ['산업입지 및 개발에 관한 법률', '산업집적활성화 및 공장설립에 관한 법률', '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률', '국토의 계획 및 이용에 관한 법률'], ...(cfg.laws || {}) };
+    $('#laws-on').checked = L.on;
+    $('#laws-notify').checked = L.notify;
+    $('#laws-items').value = L.items.join('\n');
     $('#login').checked = await api.getLogin();
   }
   $('#opacity').addEventListener('input', (e) => {
@@ -341,6 +346,20 @@
     cfg.keys = { ...(cfg.keys || {}), vworld: e.target.value.trim() };
     markDirty();
   });
+  $('#key-law').addEventListener('input', (e) => {
+    cfg.keys = { ...(cfg.keys || {}), lawOC: e.target.value.trim() };
+    markDirty();
+  });
+  const lawsSync = () => {
+    cfg.laws = {
+      on: $('#laws-on').checked,
+      notify: $('#laws-notify').checked,
+      items: $('#laws-items').value.split('\n').map((k) => k.trim()).filter(Boolean).slice(0, 20),
+    };
+    markDirty();
+  };
+  ['#laws-on', '#laws-notify'].forEach((q) => $(q).addEventListener('change', lawsSync));
+  $('#laws-items').addEventListener('input', lawsSync);
   document.querySelectorAll('.keyshow').forEach((b) => b.addEventListener('click', () => {
     const inp = document.getElementById(b.dataset.for);
     inp.type = inp.type === 'password' ? 'text' : 'password';

@@ -625,6 +625,63 @@
     },
   };
 
-  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory, webcapture, news, parcel };
-  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 전체 저장', news: '키워드 뉴스', parcel: '필지 조회' };
+  // ---------- 법령 개정 알림 ----------
+  const ymd8 = (d) => (d && d.length === 8 ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : d || '-');
+  const isFuture = (d) => d && d.length === 8 && d > new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const laws = {
+    icon: 'gavel',
+    async render(el, { api }) {
+      el.append(h(`
+        <div class="law-events"></div>
+        <h3 class="law-h">지켜보는 법령</h3>
+        <ul class="newslist law-list"></ul>
+        <div class="actions" style="justify-content:space-between;align-items:center">
+          <span class="muted law-status"></span>
+          <span style="display:flex;gap:6px">
+            <button class="btn ghost refresh">새로고침</button>
+            <button class="btn ghost readall">모두 읽음</button>
+          </span>
+        </div>`));
+      const open = (mst) => api.openItem({ type: 'url', target: `https://www.law.go.kr/lsInfoP.do?lsiSeq=${encodeURIComponent(mst)}` });
+      function draw(st) {
+        const ev = el.querySelector('.law-events'); ev.innerHTML = '';
+        const unread = st.events.filter((e) => !e.read);
+        if (unread.length) {
+          const ul = document.createElement('ul'); ul.className = 'newslist';
+          for (const e of unread) {
+            const li = document.createElement('li');
+            li.innerHTML = '<button class="unread"><span class="nt"></span><span class="nm"></span></button>';
+            li.querySelector('.nt').textContent = `${e.name} ${e.kind || '개정'}`;
+            li.querySelector('.nm').textContent = `공포 ${ymd8(e.prom)} · 시행 ${ymd8(e.enf)}${isFuture(e.enf) ? ' (시행 예정)' : ''}`;
+            li.querySelector('button').addEventListener('click', () => open(e.mst));
+            ul.appendChild(li);
+          }
+          ev.appendChild(ul);
+        }
+        const list = el.querySelector('.law-list'); list.innerHTML = '';
+        if (!st.on) list.innerHTML = '<li class="empty">설정에서 법령 개정 알림을 켜 주세요</li>';
+        else if (!st.watched.length) list.innerHTML = `<li class="empty">${st.error || '처음 확인하는 중입니다. 잠시 뒤 새로고침을 누르세요'}</li>`;
+        for (const l of st.watched) {
+          const li = document.createElement('li');
+          li.innerHTML = '<button><span class="nt"></span><span class="nm"></span></button>';
+          li.querySelector('.nt').textContent = l.name;
+          li.querySelector('.nm').textContent = `${l.kind || ''} 공포 ${ymd8(l.prom)} · 시행 ${ymd8(l.enf)}${isFuture(l.enf) ? ' (시행 예정)' : ''}`;
+          li.querySelector('button').addEventListener('click', () => open(l.mst));
+          list.appendChild(li);
+        }
+        const when = st.checkedAt ? new Date(st.checkedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        el.querySelector('.law-status').textContent = st.error && st.watched.length ? st.error : (unread.length ? `새 개정 ${unread.length}건` : when ? `마지막 확인 ${when}` : '');
+      }
+      draw(await api.getLaws());
+      window.__lawsPanelDraw = draw;
+      el.querySelector('.readall').addEventListener('click', () => api.readLaws());
+      el.querySelector('.refresh').addEventListener('click', async (e) => {
+        e.target.disabled = true; el.querySelector('.law-status').textContent = '확인하는 중…';
+        await api.refreshLaws(); e.target.disabled = false;
+      });
+    },
+  };
+
+  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory, webcapture, news, parcel, laws };
+  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 전체 저장', news: '키워드 뉴스', parcel: '필지 조회', laws: '법령 개정 알림' };
 })();

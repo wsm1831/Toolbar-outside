@@ -68,9 +68,16 @@
       <p class="hint">한 줄에 키워드 하나씩 적으세요. 띄어 쓰면 두 낱말이 모두 들어간 기사를 찾습니다.</p>
       <textarea id="news-kw" rows="4" spellcheck="false" style="font-family:inherit"></textarea>
 
+      <h2>법령 개정 알림</h2>
+      <label class="line check"><input id="laws-on" type="checkbox"> 관심 법령 개정 확인하기 (6시간마다, 국가법령정보센터)</label>
+      <label class="line check"><input id="laws-notify" type="checkbox"> 새로 공포되면 Windows 알림 띄우기</label>
+      <p class="hint">한 줄에 법률 이름 하나씩 정확히 적으세요. 그 법의 시행령·시행규칙도 함께 확인합니다.</p>
+      <textarea id="laws-items" rows="4" spellcheck="false" style="font-family:inherit"></textarea>
+
       <h2>API 인증키</h2>
       <p class="hint">인증키는 이 PC의 설정 파일에만 저장됩니다. 다른 사람에게 설정 파일을 줄 때는 지우고 주세요.</p>
       <label class="line"><span>브이월드</span><input id="key-vworld" type="password" class="keybox" autocomplete="off" spellcheck="false" placeholder="필지 조회에 사용"><button type="button" class="ghost keyshow" data-for="key-vworld">보기</button></label>
+      <label class="line"><span>국가법령정보 OC</span><input id="key-law" type="password" class="keybox" autocomplete="off" spellcheck="false" placeholder="법령 개정 알림에 사용"><button type="button" class="ghost keyshow" data-for="key-law">보기</button></label>
 
       <h2>화면 보호기 차단 (녹색 불빛)</h2>
       <label class="line check"><input id="quiet-on" type="checkbox"> 매일 소등 시간에는 자동으로 끄기</label>

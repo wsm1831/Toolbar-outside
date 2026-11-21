@@ -186,16 +186,24 @@
 
   // 키워드 뉴스: 안 읽은 기사 수를 해당 아이콘에 빨간 숫자로
   let newsNow = { unread: 0 };
+  let lawsNow = { unread: 0 };
   function drawNewsBadge() {
     document.querySelectorAll('.tile .badge').forEach((b) => b.remove());
-    if (!newsNow.unread) return;
-    const tile = quick.querySelector('[data-qid="news"]') || dock.querySelector('.tile-cat[data-id="utils"]');
-    if (!tile) return;
-    const b = document.createElement('span');
-    b.className = 'badge';
-    b.textContent = newsNow.unread > 99 ? '99+' : newsNow.unread;
-    tile.appendChild(b);
+    for (const [qid, n] of [['news', newsNow.unread], ['laws', lawsNow.unread]]) {
+      if (!n) continue;
+      const tile = quick.querySelector(`[data-qid="${qid}"]`) || dock.querySelector('.tile-cat[data-id="utils"]');
+      if (!tile || tile.querySelector('.badge')) continue;
+      const b = document.createElement('span');
+      b.className = 'badge';
+      b.textContent = n > 99 ? '99+' : n;
+      tile.appendChild(b);
+    }
   }
+  api.onLaws((st) => {
+    lawsNow = st;
+    drawNewsBadge();
+    if (window.__lawsPanelDraw && openTool === 'laws') window.__lawsPanelDraw(st);
+  });
   api.onNews((st) => {
     newsNow = st;
     drawNewsBadge();
@@ -418,6 +426,7 @@
     renderAwake(await api.getAwake());
     renderWeather(await api.getWeather());
     newsNow = await api.getNews();
+    lawsNow = await api.getLaws();
     drawNewsBadge();
   })();
   api.onConfigChanged((cfg) => {

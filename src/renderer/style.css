@@ -469,6 +469,12 @@ body.awake #dock { opacity: 1; }
 .pc-row span:first-child { color: var(--ink-dim); }
 .pc-row span:last-child { word-break: break-all; }
 
+/* 법령 개정 알림 */
+.panel:has(.law-list) { width: 440px; }
+.law-h { margin: 6px 0 6px; font-size: 12.5px; font-weight: 600; color: var(--ink-dim); }
+.law-events .newslist { max-height: 150px; margin-bottom: 4px; }
+.law-list { max-height: 230px; }
+
 /* 키워드 뉴스 */
 .tile .badge {
   position: absolute;
