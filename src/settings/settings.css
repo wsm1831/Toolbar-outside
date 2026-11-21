@@ -209,3 +209,14 @@ body.sorting, body.sorting * { cursor: grabbing !important; user-select: none; }
 .cat-row { border-radius: 8px; }
 
 .keybox { width: 320px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font-family: Consolas, monospace; }
+
+/* 구분선 줄 */
+.side-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.side-hint { margin: 2px 8px 0; }
+.sep-nav { gap: 6px; padding: 6px 8px; cursor: default; }
+.sep-nav:hover { background: transparent; }
+.sep-line { flex: 1; height: 0; border-top: 2px dashed #B7C0CF; }
+.sep-label { font-size: 12px; color: var(--ink-dim); }
+.sep-nav .sep-del { width: 24px; height: 24px; opacity: 0; }
+.sep-nav:hover .sep-del, .sep-nav:hover .grip { opacity: 1; }
+.sep-nav .grip { opacity: 0.5; }

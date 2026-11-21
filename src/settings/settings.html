@@ -14,7 +14,11 @@
     <hr>
     <h1>메뉴</h1>
     <ul id="cat-list"></ul>
-    <button id="add-cat" class="link-btn">카테고리 추가</button>
+    <div class="side-actions">
+      <button id="add-cat" class="link-btn">카테고리 추가</button>
+      <button id="add-sep" class="link-btn">구분선 추가</button>
+    </div>
+    <p class="hint side-hint">목록 순서 그대로 툴바에 놓입니다. 구분선을 끌어 카테고리 사이 원하는 곳에 두세요.</p>
   </aside>
 
   <main>
@@ -26,7 +30,6 @@
         </div>
       </div>
       <label class="line check pin-line"><input id="cat-pinned" type="checkbox"> 이 카테고리의 항목을 툴바에 바로 표시 (카테고리 버튼 없이)</label>
-      <label class="line check pin-line"><input id="cat-right" type="checkbox"> 카테고리 버튼을 오른쪽 도구 묶음(구분선 오른쪽)에 두기</label>
       <div class="cat-style">
         <div>
           <span class="lbl">아이콘</span>

@@ -99,6 +99,18 @@
       const li = document.createElement('li');
       li.dataset.idx = i;
       li.className = 'cat-row';
+      if (c.type === 'separator') {
+        // 구분선: 끌어서 위치를 바꾸고, 휴지통으로 지운다
+        li.classList.add('sep-row');
+        li.innerHTML = `<div class="nav sep-nav"><span class="sep-line" aria-hidden="true"></span><span class="sep-label">구분선</span><span class="sep-line" aria-hidden="true"></span><button class="icon-only danger sep-del" title="구분선 지우기" aria-label="구분선 지우기">${window.icon('trash-2', 14)}</button><span class="grip" title="끌어서 위치 바꾸기">${window.icon('grip-vertical', 16)}</span></div>`;
+        li.querySelector('.sep-del').addEventListener('click', () => {
+          cfg.categories.splice(i, 1);
+          if (view.kind === 'cat' && view.index > i) view.index -= 1;
+          markDirty(); render();
+        });
+        list.appendChild(li);
+        return;
+      }
       li.innerHTML = `<button class="nav"><span class="dot" style="--c:${esc(c.color)}">${window.icon(c.icon, 16)}</span><span class="nm"></span><span class="grip" title="끌어서 순서 바꾸기">${window.icon('grip-vertical', 16)}</span></button>`;
       li.querySelector('.nm').textContent = c.name;
       const b = li.firstElementChild;
@@ -117,11 +129,9 @@
   // ---------- 카테고리 화면 ----------
   function renderCat() {
     const cat = cfg.categories[view.index];
-    if (!cat) { view = { kind: 'general' }; return render(); }
+    if (!cat || cat.type === 'separator') { view = { kind: 'general' }; return render(); }
     $('#cat-name').value = cat.name;
     $('#cat-pinned').checked = !!cat.pinned;
-    $('#cat-right').checked = cat.side === 'right';
-    $('#cat-right').disabled = !!cat.pinned;
 
     const ig = $('#cat-icons');
     ig.innerHTML = '';
@@ -231,6 +241,7 @@
     // 위치: 다른 카테고리로 옮기기
     const mv = li.querySelector('.move');
     cfg.categories.forEach((c, ci) => {
+      if (c.type === 'separator') return;
       const label = `위치: ${c.name}${c.pinned ? ' (툴바에 바로)' : ''}`;
       mv.add(new Option(label, ci, false, ci === view.index));
     });
@@ -268,11 +279,6 @@
     if (e.target.checked) cat.pinned = true; else delete cat.pinned;
     markDirty(); renderCat();
   });
-  $('#cat-right').addEventListener('change', (e) => {
-    const cat = cfg.categories[view.index];
-    if (e.target.checked) cat.side = 'right'; else delete cat.side;
-    markDirty();
-  });
   $('#cat-name').addEventListener('input', (e) => { cfg.categories[view.index].name = e.target.value; markDirty(); renderSide(); });
   $('#cat-del').addEventListener('click', () => {
     const c = cfg.categories[view.index];
@@ -286,6 +292,10 @@
     view = { kind: 'cat', index: cfg.categories.length - 1 };
     markDirty(); render();
     $('#cat-name').select();
+  });
+  $('#add-sep').addEventListener('click', () => {
+    cfg.categories.push({ id: uid(), type: 'separator' });
+    markDirty(); render();
   });
   $('#add-item').addEventListener('click', () => {
     const cat = cfg.categories[view.index];

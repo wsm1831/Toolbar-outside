@@ -59,8 +59,8 @@ function migrateConfig(cfg) {
     // v3 이후: 사용자가 고친 메뉴(이름·주소·순서)는 그대로 두고, 아이콘은 새 기본값으로 맞춘다.
     // 단, 설정 창에서 직접 고른 아이콘(iconCustom)은 건드리지 않는다.
     const defItems = new Map();
-    def.categories.forEach((c) => c.items.forEach((it) => defItems.set(it.id, it)));
-    next.categories = cfg.categories.map((c) => ({
+    def.categories.forEach((c) => (c.items || []).forEach((it) => defItems.set(it.id, it)));
+    next.categories = cfg.categories.map((c) => (!c.items ? c : {
       ...c,
       items: c.items.map((it) => {
         const d = defItems.get(it.id);
@@ -95,14 +95,14 @@ function migrateConfig(cfg) {
     // v15: 툴바 바로가기에 '키워드 뉴스', AI에 GitHub·Netlify·Cloudflare 추가
     const defCat = (id) => def.categories.find((c) => c.id === id);
     const pinned = next.categories.find((c) => c.pinned);
-    const hasItem = (id) => next.categories.some((c) => c.items.some((it) => it.id === id));
+    const hasItem = (id) => next.categories.some((c) => (c.items || []).some((it) => it.id === id));
     if (pinned && !hasItem('news')) pinned.items.push(defCat('quick').items.find((it) => it.id === 'news'));
     const ai = next.categories.find((c) => c.id === 'ai');
     if (ai) for (const id of ['github', 'netlify', 'cloudflare']) if (!hasItem(id)) ai.items.push(defCat('ai').items.find((it) => it.id === id));
   }
   if (from < 16 && from >= 2) {
     // v16: 유틸리티에 '필지 조회' 추가
-    const has = next.categories.some((c) => c.items.some((it) => it.id === 'parcel'));
+    const has = next.categories.some((c) => (c.items || []).some((it) => it.id === 'parcel'));
     const utils = next.categories.find((c) => c.id === 'utils');
     const item = def.categories.find((c) => c.id === 'utils').items.find((it) => it.id === 'parcel');
     if (!has && utils && item) utils.items.unshift(item);
@@ -110,20 +110,29 @@ function migrateConfig(cfg) {
   if (from < 17 && from >= 2) {
     // v17: 툴바 바로가기에 '법령 개정 알림' 추가
     const pinned = next.categories.find((c) => c.pinned);
-    const has = next.categories.some((c) => c.items.some((it) => it.id === 'laws'));
+    const has = next.categories.some((c) => (c.items || []).some((it) => it.id === 'laws'));
     const item = def.categories.find((c) => c.pinned).items.find((it) => it.id === 'laws');
     if (pinned && !has && item) pinned.items.push(item);
   }
   if (from < 18 && from >= 2) {
     // v18: 행정·법령에 '공공데이터포털' 추가 (국가통계포털 다음)
     const admin = next.categories.find((c) => c.id === 'admin');
-    const has = next.categories.some((c) => c.items.some((it) => it.id === 'datagokr'));
+    const has = next.categories.some((c) => (c.items || []).some((it) => it.id === 'datagokr'));
     const item = def.categories.find((c) => c.id === 'admin').items.find((it) => it.id === 'datagokr');
-    for (const c of next.categories) for (const it of c.items) if (it.id === 'webcapture' && it.name === '웹페이지 전체 저장') it.name = '웹페이지 저장';
+    for (const c of next.categories) for (const it of (c.items || [])) if (it.id === 'webcapture' && it.name === '웹페이지 전체 저장') it.name = '웹페이지 저장';
     if (admin && !has && item) {
       const at = admin.items.findIndex((it) => it.id === 'kosis');
       admin.items.splice(at >= 0 ? at + 1 : admin.items.length, 0, item);
     }
+  }
+  if (from < 19 && from >= 2) {
+    // v19: 구분선을 목록 안의 한 줄로. 예전 '오른쪽 도구 묶음(side:right)'·바로 표시 카테고리 앞에 구분선을 넣는다
+    if (!next.categories.some((c) => c.type === 'separator')) {
+      const left = next.categories.filter((c) => !c.pinned && c.side !== 'right');
+      const right = [...next.categories.filter((c) => !c.pinned && c.side === 'right'), ...next.categories.filter((c) => c.pinned)];
+      next.categories = right.length ? [...left, { id: 'sep-1', type: 'separator' }, ...right] : left;
+    }
+    next.categories = next.categories.map(({ side, ...c }) => c);
   }
   writeConfig(next);
   return next;

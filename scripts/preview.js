@@ -105,12 +105,12 @@ const mock = (cfg) => {
   await page.screenshot({ path: `${out}/7-anim-mid.png` });
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
-  await page.click('#quick [data-qid="webcapture"]');
+  await page.click('[data-qid="webcapture"]');
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/7b-webcapture.png` });
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
-  await page.click('#quick [data-qid="news"]');
+  await page.click('[data-qid="news"]');
   await page.waitForTimeout(500);
   await page.fill('.kw-in', '스마트그린산단');
   await page.keyboard.press('Enter');
@@ -141,7 +141,7 @@ const mock = (cfg) => {
   await page.screenshot({ path: `${out}/7d3-bulk.png` });
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
-  await page.click('#quick [data-qid="laws"]');
+  await page.click('[data-qid="laws"]');
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/7e-laws.png` });
   const errs = [];

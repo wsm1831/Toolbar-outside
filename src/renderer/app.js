@@ -157,29 +157,41 @@
     return b;
   }
 
+  function quickTile(item, cat) {
+    const b = document.createElement('button');
+    b.className = 'tile tile-quick';
+    b.dataset.tip = item.name;
+    b.dataset.qid = item.id;
+    b.setAttribute('aria-label', item.name);
+    renderItemIcon(b, item, cat.color || '#9C7CF0');
+    b.addEventListener('click', () => {
+      if (openQuickId === item.id) return closePop();
+      activate(item, cat, b);
+    });
+    return b;
+  }
+
+  // 설정의 카테고리 목록 순서 그대로 그린다: 카테고리 버튼 / 바로 표시(pinned) 항목 / 구분선
   function renderDock() {
     document.documentElement.style.setProperty('--idle-opacity', config.appearance?.idleOpacity ?? 0.35);
     cats.innerHTML = '';
     quick.innerHTML = '';
-    for (const cat of config.categories.filter((c) => !c.pinned && c.side !== 'right')) cats.appendChild(catTile(cat));
-    for (const cat of config.categories.filter((c) => !c.pinned && c.side === 'right')) quick.appendChild(catTile(cat));
-    // '툴바에 바로 표시'(pinned) 카테고리의 항목은 독에 바로 놓는다
-    for (const cat of config.categories.filter((c) => c.pinned)) {
-      for (const item of cat.items || []) {
-        const b = document.createElement('button');
-        b.className = 'tile tile-quick';
-        b.dataset.tip = item.name;
-        b.dataset.qid = item.id;
-        b.setAttribute('aria-label', item.name);
-        renderItemIcon(b, item, cat.color || '#9C7CF0');
-        b.addEventListener('click', () => {
-          if (openQuickId === item.id) return closePop();
-          activate(item, cat, b);
-        });
-        quick.appendChild(b);
+    let pendingSep = false;
+    const add = (el) => {
+      if (pendingSep && cats.children.length) {
+        const sep = document.createElement('div');
+        sep.className = 'sep'; sep.setAttribute('aria-hidden', 'true');
+        cats.appendChild(sep);
       }
+      pendingSep = false;
+      cats.appendChild(el);
+    };
+    for (const cat of config.categories) {
+      if (cat.type === 'separator') { pendingSep = true; continue; } // 연달아 있거나 맨 끝 구분선은 그리지 않음
+      if (cat.pinned) for (const item of cat.items || []) add(quickTile(item, cat));
+      else add(catTile(cat));
     }
-    $('#sep-quick').hidden = !quick.children.length || !cats.children.length;
+    $('#sep-quick').hidden = true;
     $('#btn-settings').innerHTML = window.icon('settings', 16);
     drawNewsBadge();
   }
@@ -191,7 +203,7 @@
     document.querySelectorAll('.tile .badge').forEach((b) => b.remove());
     for (const [qid, n] of [['news', newsNow.unread], ['laws', lawsNow.unread]]) {
       if (!n) continue;
-      const tile = quick.querySelector(`[data-qid="${qid}"]`) || dock.querySelector('.tile-cat[data-id="utils"]');
+      const tile = dock.querySelector(`[data-qid="${qid}"]`) || dock.querySelector('.tile-cat[data-id="utils"]');
       if (!tile || tile.querySelector('.badge')) continue;
       const b = document.createElement('span');
       b.className = 'badge';

@@ -1,5 +1,5 @@
 {
-  "version": 18,
+  "version": 19,
   "appearance": {
     "idleOpacity": 0.35,
     "tileSize": 52
@@ -326,6 +326,10 @@
       ]
     },
     {
+      "id": "sep-1",
+      "type": "separator"
+    },
+    {
       "id": "utils",
       "name": "유틸리티",
       "icon": "sparkles",
@@ -388,8 +392,7 @@
           "target": "https://papago.naver.com",
           "icon": "builtin:languages"
         }
-      ],
-      "side": "right"
+      ]
     },
     {
       "id": "quick",
