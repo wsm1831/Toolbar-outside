@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('api', {
   loadMemo: () => ipcRenderer.invoke('memo:load'),
   saveMemo: (text) => ipcRenderer.invoke('memo:save', text),
 
+  capturePage: (url, format) => ipcRenderer.invoke('capture:page', url, format),
   getWeather: () => ipcRenderer.invoke('weather:get'),
   weatherCities: () => ipcRenderer.invoke('weather:cities'),
   refreshWeather: () => ipcRenderer.invoke('weather:refresh'),

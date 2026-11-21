@@ -70,6 +70,12 @@ function migrateConfig(cfg) {
       }),
     }));
   }
+  if (from < 12 && from >= 2) {
+    // v12: 빠른 메모·클립보드·계산기·캡처 도구는 '툴바 바로가기'로 옮기고, 그림판·파일 탐색기·작업 관리자는 뺀다
+    const moved = new Set(['memo', 'cliphistory', 'calc', 'snip', 'paint', 'explorer', 'taskmgr']);
+    next.categories = next.categories.map((c) => (c.pinned ? c : { ...c, items: c.items.filter((it) => !moved.has(it.id)) }));
+    if (!next.categories.some((c) => c.pinned)) next.categories.push(def.categories.find((c) => c.pinned));
+  }
   writeConfig(next);
   return next;
 }
@@ -371,6 +377,65 @@ function sendWeather() {
   if (dockWin && !dockWin.isDestroyed()) dockWin.webContents.send('weather:update', weatherState);
 }
 
+// ---------- 웹페이지 전체 저장 (PDF / 이미지) ----------
+// 주소를 숨은 창에 열고, 아래쪽까지 한 번 훑어 내려 지연 로딩되는 그림을 불러온 뒤 저장한다.
+async function capturePage(url, format) {
+  if (!/^https?:\/\//i.test(url)) throw new Error('http:// 또는 https:// 로 시작하는 주소를 넣어 주세요.');
+  // 이미지 저장은 화면이 실제로 그려져야 하므로, 화면 밖에 투명·비활성 창으로 띄운다
+  const win = new BrowserWindow({
+    show: false, width: 1280, height: 900, x: -30000, y: 0,
+    frame: false, skipTaskbar: true, focusable: false, opacity: 0, paintWhenInitiallyHidden: true,
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+  });
+  const withTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(msg)), ms))]);
+  try {
+    win.webContents.setAudioMuted(true);
+    await Promise.race([
+      win.loadURL(url),
+      new Promise((_, no) => setTimeout(() => no(new Error('페이지를 30초 안에 불러오지 못했습니다.')), 30000)),
+    ]);
+    await win.webContents.executeJavaScript(`new Promise((done) => {
+      let y = 0; const step = () => { y += 700; window.scrollTo(0, y);
+        if (y < document.documentElement.scrollHeight && y < 60000) setTimeout(step, 120); else { window.scrollTo(0, 0); setTimeout(done, 800); } };
+      step(); })`);
+    const title = (win.webContents.getTitle() || 'webpage').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 60) || 'webpage';
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    let data; let ext;
+    if (format === 'pdf') {
+      data = await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4', preferCSSPageSize: false });
+      ext = 'pdf';
+    } else {
+      win.setPosition(-30000, 0);
+      win.showInactive();
+      await new Promise((r) => setTimeout(r, 400));
+      const dbg = win.webContents.debugger;
+      dbg.attach('1.3');
+      const m = await dbg.sendCommand('Page.getLayoutMetrics');
+      const size = m.cssContentSize || m.contentSize;
+      const width = Math.ceil(Math.min(size.width, 1600));
+      const height = Math.ceil(Math.min(size.height, 30000)); // 너무 긴 페이지는 30000px에서 자름
+      const shot = await withTimeout(dbg.sendCommand('Page.captureScreenshot', {
+        format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width, height, scale: 1 },
+      }), 40000, '이미지를 만드는 데 너무 오래 걸립니다. PDF로 저장해 보세요.');
+      dbg.detach();
+      data = Buffer.from(shot.data, 'base64');
+      ext = 'png';
+    }
+    const r = await dialog.showSaveDialog({
+      title: format === 'pdf' ? 'PDF로 저장' : '이미지로 저장',
+      defaultPath: path.join(app.getPath('downloads'), `${title}_${stamp}.${ext}`),
+      filters: [format === 'pdf' ? { name: 'PDF', extensions: ['pdf'] } : { name: 'PNG 이미지', extensions: ['png'] }],
+    });
+    if (r.canceled || !r.filePath) return { ok: false, canceled: true };
+    fs.writeFileSync(r.filePath, data);
+    shell.showItemInFolder(r.filePath);
+    return { ok: true, file: r.filePath };
+  } finally {
+    if (!win.isDestroyed()) win.destroy();
+  }
+}
+
 // ---------- IPC ----------
 function registerIpc() {
   ipcMain.handle('config:get', () => config);
@@ -478,6 +543,9 @@ function registerIpc() {
     if (Notification.isSupported()) new Notification({ title, body, icon: ICON_PATH }).show();
   });
 
+  ipcMain.handle('capture:page', async (e, url, format) => {
+    try { return await capturePage(String(url).trim(), format); } catch (err) { return { ok: false, message: err.message || String(err) }; }
+  });
   ipcMain.handle('weather:get', () => weatherState);
   ipcMain.handle('weather:cities', () => CITIES.map((c) => c.name));
   ipcMain.handle('weather:refresh', () => refreshWeather());

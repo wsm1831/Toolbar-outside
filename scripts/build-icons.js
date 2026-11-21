@@ -6,7 +6,7 @@ const names = ['globe','wrench','folder','folder-open','sparkles','settings','st
   'remove-formatting','clipboard-list','spell-check','languages','calculator','scissors','file-text','house','star',
   'briefcase','book-open','link','x','chevron-left','copy','trash-2','plus','arrow-up','arrow-down','terminal',
   'monitor','image','download','pencil','bell','clock','search','mail','building-2','scale','landmark','map',
-  'newspaper','app-window','power','eye-off','notebook-pen','paintbrush','activity','layout-grid','check','grip-vertical','factory','train-front','ruler','banknote','car-front','map-pinned','sun','moon','cloud-sun','cloud-moon','cloud','cloud-fog','cloud-drizzle','cloud-rain','cloud-snow','cloud-lightning'];
+  'newspaper','app-window','power','eye-off','notebook-pen','paintbrush','activity','layout-grid','check','grip-vertical','factory','train-front','ruler','banknote','car-front','map-pinned','sun','moon','cloud-sun','cloud-moon','cloud','cloud-fog','cloud-drizzle','cloud-rain','cloud-snow','cloud-lightning','file-down','scan-line'];
 const dir = path.dirname(require.resolve('lucide-static/package.json')) + '/icons';
 const out = {};
 for (const n of names) {

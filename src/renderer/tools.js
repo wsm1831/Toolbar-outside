@@ -463,6 +463,45 @@
     },
   };
 
-  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory };
-  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록' };
+  // ---------- 웹페이지 전체 저장 ----------
+  const webcapture = {
+    icon: 'file-down',
+    async render(el, { api }) {
+      el.append(h(`
+        <div class="field"><label for="wc-url">저장할 페이지 주소</label><input id="wc-url" type="text" placeholder="https://..." autocomplete="off" spellcheck="false"></div>
+        <p class="muted" style="margin:0 0 10px">브라우저 주소창에서 Ctrl+L, Ctrl+C로 주소를 복사한 뒤 이 창을 열면 자동으로 들어갑니다. 스크롤해야 보이는 아래쪽까지 모두 저장합니다.</p>
+        <div class="actions">
+          <button class="btn ghost img">이미지(PNG)로 저장</button>
+          <button class="btn pdf">PDF로 저장</button>
+        </div>
+        <p class="muted status" style="margin:8px 0 0" aria-live="polite"></p>
+        <p class="muted" style="margin:6px 0 0">로그인해야 보이는 페이지는 로그인 화면이 저장될 수 있습니다. 그럴 때는 Edge의 '웹 캡처'(Ctrl+Shift+S)를 쓰세요.</p>`));
+      const inp = el.querySelector('#wc-url');
+      const status = el.querySelector('.status');
+      const clip = (await api.readClipboard() || '').trim();
+      if (/^https?:\/\/\S+$/i.test(clip)) inp.value = clip;
+      inp.focus();
+      let busy = false;
+      async function go(format) {
+        if (busy) return;
+        const url = inp.value.trim();
+        if (!/^https?:\/\//i.test(url)) { status.textContent = 'http:// 또는 https:// 로 시작하는 주소를 넣어 주세요.'; return; }
+        busy = true;
+        el.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        status.textContent = '페이지를 불러와 아래쪽까지 읽는 중입니다… (10~30초)';
+        const r = await api.capturePage(url, format);
+        busy = false;
+        el.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+        if (r.ok) status.textContent = `저장했습니다: ${r.file}`;
+        else if (r.canceled) status.textContent = '저장을 취소했습니다.';
+        else status.textContent = `저장하지 못했습니다: ${r.message}`;
+      }
+      el.querySelector('.pdf').addEventListener('click', () => go('pdf'));
+      el.querySelector('.img').addEventListener('click', () => go('png'));
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go('pdf'); });
+    },
+  };
+
+  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory, webcapture };
+  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 전체 저장' };
 })();

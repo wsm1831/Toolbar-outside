@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "appearance": {
     "idleOpacity": 0.35,
     "tileSize": 52
@@ -225,12 +225,6 @@
       "color": "#9C7CF0",
       "items": [
         {
-          "id": "memo",
-          "name": "빠른 메모",
-          "type": "tool",
-          "target": "memo"
-        },
-        {
           "id": "datecalc",
           "name": "날짜 계산",
           "type": "tool",
@@ -255,12 +249,6 @@
           "target": "textclean"
         },
         {
-          "id": "cliphistory",
-          "name": "클립보드 기록",
-          "type": "tool",
-          "target": "cliphistory"
-        },
-        {
           "id": "timer",
           "name": "타이머·알람",
           "type": "tool",
@@ -271,36 +259,6 @@
           "name": "메모장",
           "type": "app",
           "target": "notepad.exe"
-        },
-        {
-          "id": "calc",
-          "name": "계산기",
-          "type": "app",
-          "target": "calc.exe"
-        },
-        {
-          "id": "snip",
-          "name": "화면 캡처",
-          "type": "app",
-          "target": "ms-screenclip:"
-        },
-        {
-          "id": "paint",
-          "name": "그림판",
-          "type": "app",
-          "target": "mspaint.exe"
-        },
-        {
-          "id": "explorer",
-          "name": "파일 탐색기",
-          "type": "app",
-          "target": "explorer.exe"
-        },
-        {
-          "id": "taskmgr",
-          "name": "작업 관리자",
-          "type": "app",
-          "target": "taskmgr.exe"
         },
         {
           "id": "speller",
@@ -315,6 +273,47 @@
           "type": "url",
           "target": "https://papago.naver.com",
           "icon": "builtin:languages"
+        }
+      ]
+    },
+    {
+      "id": "quick",
+      "name": "툴바 바로가기",
+      "icon": "layout-grid",
+      "color": "#7FA8D9",
+      "pinned": true,
+      "items": [
+        {
+          "id": "memo",
+          "name": "빠른 메모",
+          "type": "tool",
+          "target": "memo"
+        },
+        {
+          "id": "cliphistory",
+          "name": "클립보드 기록",
+          "type": "tool",
+          "target": "cliphistory"
+        },
+        {
+          "id": "calc",
+          "name": "계산기",
+          "type": "app",
+          "target": "calc.exe",
+          "icon": "builtin:calculator"
+        },
+        {
+          "id": "snip",
+          "name": "캡처 도구",
+          "type": "app",
+          "target": "ms-screenclip:",
+          "icon": "builtin:scissors"
+        },
+        {
+          "id": "webcapture",
+          "name": "웹페이지 전체 저장",
+          "type": "tool",
+          "target": "webcapture"
         }
       ]
     }

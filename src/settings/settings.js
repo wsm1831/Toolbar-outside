@@ -106,6 +106,7 @@
     const cat = cfg.categories[view.index];
     if (!cat) { view = { kind: 'general' }; return render(); }
     $('#cat-name').value = cat.name;
+    $('#cat-pinned').checked = !!cat.pinned;
 
     const ig = $('#cat-icons');
     ig.innerHTML = '';
@@ -232,6 +233,11 @@
     render();
   }
 
+  $('#cat-pinned').addEventListener('change', (e) => {
+    const cat = cfg.categories[view.index];
+    if (e.target.checked) cat.pinned = true; else delete cat.pinned;
+    markDirty();
+  });
   $('#cat-name').addEventListener('input', (e) => { cfg.categories[view.index].name = e.target.value; markDirty(); renderSide(); });
   $('#cat-del').addEventListener('click', () => {
     const c = cfg.categories[view.index];

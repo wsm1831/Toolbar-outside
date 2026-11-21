@@ -3,6 +3,7 @@
   const api = window.api;
   const $ = (s) => document.querySelector(s);
   const cats = $('#cats');
+  const quick = $('#quick');
   const pop = $('#pop');
   const dock = $('#dock');
   const tip = $('#tip');
@@ -11,6 +12,7 @@
   let config = null;
   let openCatId = null;   // 열려 있는 카테고리
   let openTool = null;    // 열려 있는 유틸리티 패널
+  let openQuickId = null; // 독에 바로 놓인 항목 중 패널을 연 것
   const iconCache = new Map();
 
   // ---------- 마우스: 독 위에 있을 때만 클릭을 받고, 나머지는 뒤의 창으로 통과 ----------
@@ -139,7 +141,25 @@
   function renderDock() {
     document.documentElement.style.setProperty('--idle-opacity', config.appearance?.idleOpacity ?? 0.35);
     cats.innerHTML = '';
-    for (const cat of config.categories) {
+    // '툴바에 바로 표시'(pinned) 카테고리의 항목은 독에 바로 놓는다
+    quick.innerHTML = '';
+    for (const cat of config.categories.filter((c) => c.pinned)) {
+      for (const item of cat.items || []) {
+        const b = document.createElement('button');
+        b.className = 'tile tile-quick';
+        b.dataset.tip = item.name;
+        b.dataset.qid = item.id;
+        b.setAttribute('aria-label', item.name);
+        renderItemIcon(b, item, cat.color || '#7FA8D9');
+        b.addEventListener('click', () => {
+          if (openQuickId === item.id) return closePop();
+          activate(item, cat, b);
+        });
+        quick.appendChild(b);
+      }
+    }
+    $('#sep-quick').hidden = !quick.children.length;
+    for (const cat of config.categories.filter((c) => !c.pinned)) {
       const b = document.createElement('button');
       b.className = 'tile tile-cat';
       b.style.setProperty('--c', cat.color || '#5B6B8C');
@@ -183,6 +203,7 @@
     if (pop.hidden) return;
     openCatId = null;
     openTool = null;
+    openQuickId = null;
     markActive();
     clearTimeout(closeTimer);
     const done = () => { pop.hidden = true; pop.innerHTML = ''; pop.classList.remove('closing'); scheduleSleep(); };
@@ -193,6 +214,7 @@
   window.closePop = closePop;
 
   function prepPop() {
+    hideTip(); // 메뉴가 열리면 떠 있던 이름 풍선은 지운다 (메뉴를 가리지 않게)
     clearTimeout(closeTimer);
     pop.classList.remove('closing');
     pop.innerHTML = '';
@@ -206,6 +228,7 @@
     if (!cat) return;
     openCatId = id;
     openTool = null;
+    openQuickId = null;
     markActive();
     prepPop();
 
@@ -239,16 +262,17 @@
     anchorPop(cats.querySelector(`[data-id="${CSS.escape(id)}"]`));
   }
 
-  async function activate(item, cat) {
-    if (item.type === 'tool') return openPanel(item, cat);
+  async function activate(item, cat, anchor) {
+    if (item.type === 'tool') return openPanel(item, cat, anchor);
     const res = await api.openItem(item);
     if (!res.ok) showToast(`${item.name}을(를) 열지 못했습니다: ${res.message}`);
     else closePop();
   }
 
-  function openPanel(item, cat) {
+  function openPanel(item, cat, anchor) {
     const tool = window.TOOLS[item.target];
     if (!tool) return showToast(`알 수 없는 도구입니다: ${item.target}`);
+    if (anchor) { openCatId = null; openQuickId = item.id; markActive(); } // 독에서 바로 연 패널
     openTool = item.target;
     prepPop();
     const panel = document.createElement('section');
@@ -262,6 +286,7 @@
       </div>
       <div class="panel-body"></div>`;
     panel.querySelector('h2').textContent = item.name;
+    if (anchor) panel.querySelector('.back').hidden = true;
     panel.querySelector('.back').addEventListener('click', () => { const id = openCatId; openCatId = null; toggleCategory(id); });
     panel.querySelector('.close').addEventListener('click', () => closePop());
     const notch = document.createElement('div');
@@ -269,7 +294,7 @@
     pop.append(panel, notch);
     api.focusDock();
     tool.render(panel.querySelector('.panel-body'), { api, config, showToast });
-    anchorPop(cats.querySelector(`[data-id="${CSS.escape(openCatId)}"]`));
+    anchorPop(anchor || cats.querySelector(`[data-id="${CSS.escape(openCatId)}"]`));
   }
 
   // 다른 곳을 클릭하거나 Esc를 누르면 닫기

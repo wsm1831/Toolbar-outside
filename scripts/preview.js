@@ -23,6 +23,7 @@ const mock = (cfg) => {
     onAwake: () => {},
     getWeather: async () => ({ city: '서울', temp: 12.4, code: 2, isDay: true, max: 15, min: 4 }),
     weatherCities: async () => ['서울', '부산', '김천'], refreshWeather: async () => {}, onWeather: () => {},
+    capturePage: async () => ({ ok: true, file: 'C:\\Users\\me\\Downloads\\기사_20261121.pdf' }),
     setSettingsDirty: () => {}, onSaveRequest: () => {}, closeSettings: () => {}, notify: () => {}, openSettings: () => {}, quit: () => {}, getLogin: async () => false, setLogin: async (v) => v,
   };
 };
@@ -50,7 +51,7 @@ const mock = (cfg) => {
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${out}/${i}-${id}-tip.png` });
   }
-  await page.click('#pop .tile >> nth=3'); // 금액 한글 표기
+  await page.click('#pop .tile >> nth=2'); // 금액 한글 표기
   await page.waitForTimeout(400);
   await page.fill('#km-in', '113560');
   await page.waitForTimeout(200);
@@ -58,7 +59,7 @@ const mock = (cfg) => {
   console.log('money:', await page.$$eval('.money-row .mv', (e) => e.map((x) => x.textContent)));
   await page.click('.panel .back');
   await page.waitForTimeout(500);
-  await page.click('#pop .tile >> nth=2'); // 단위 환산
+  await page.click('#pop .tile >> nth=1'); // 단위 환산
   await page.waitForTimeout(400);
   await page.fill('.unit-row:nth-child(2) input', '1000');
   await page.dispatchEvent('.unit-row:nth-child(2) input', 'input');
@@ -67,7 +68,7 @@ const mock = (cfg) => {
   console.log('units:', await page.$$eval('.unit-row input', (e) => e.map((x) => x.value)));
   await page.click('.panel .back');
   await page.waitForTimeout(500);
-  await page.click('#pop .tile >> nth=1'); // 날짜 계산
+  await page.click('#pop .tile >> nth=0'); // 날짜 계산
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/5-datecalc.png` });
   await page.click('.seg button[data-m="deadline"]');
@@ -79,6 +80,11 @@ const mock = (cfg) => {
   await page.click('#cats [data-id="trip"]');
   await page.waitForTimeout(120);
   await page.screenshot({ path: `${out}/7-anim-mid.png` });
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  await page.click('#quick [data-qid="webcapture"]');
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${out}/7b-webcapture.png` });
   const errs = [];
   const sp = await browser.newPage({ viewport: { width: 860, height: 640 }, deviceScaleFactor: 2, locale: 'ko-KR' });
   sp.on('pageerror', (e) => errs.push(e.message));
