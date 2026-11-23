@@ -1,8 +1,8 @@
 {
   "name": "toolbar-outside",
   "productName": "WorkToolbar",
-  "version": "0.7.1",
-  "description": "화면 아래에 떠 있는 업무용 바로가기 독 (Windows)",
+  "version": "0.7.2",
+  "description": "외부망용 작업도구",
   "main": "src/main.js",
   "private": true,
   "license": "UNLICENSED",
@@ -35,7 +35,7 @@
       "icon": "build/icon.png"
     },
     "portable": {
-      "artifactName": "WorkToolbar-${version}-portable.exe"
+      "artifactName": "Toolbar-outside-v${version}.exe"
     }
   },
   "devDependencies": {

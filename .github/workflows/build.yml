@@ -24,19 +24,22 @@ jobs:
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
-          name: WorkToolbar-${{ steps.ver.outputs.version }}
+          name: Toolbar-outside-v${{ steps.ver.outputs.version }}
           path: dist/*.exe
           retention-days: 30
-      # 항상 같은 주소에서 최신판을 받을 수 있도록 'latest' 배포 페이지에 덮어쓴다.
+      # 'latest' 배포 페이지에 이번 버전 파일(Toolbar-outside-v버전.exe)을 올리고, 예전 버전 파일은 지운다.
       - name: 최신판 배포 페이지에 올리기
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp dist/*.exe WorkToolbar-portable.exe
+          FILE="Toolbar-outside-v${{ steps.ver.outputs.version }}.exe"
+          cp dist/*.exe "$FILE"
           gh release view latest >/dev/null 2>&1 || \
-            gh release create latest --target "$GITHUB_SHA" --title "업무 툴바 최신판" \
-              --notes "항상 가장 최근에 만든 실행 파일입니다. WorkToolbar-portable.exe 를 받아 실행하세요."
-          gh release upload latest WorkToolbar-portable.exe --clobber
+            gh release create latest --target "$GITHUB_SHA" --title "업무 툴바 최신판" --notes "항상 가장 최근에 만든 실행 파일입니다."
+          gh release upload latest "$FILE" --clobber
+          for a in $(gh release view latest --json assets -q '.assets[].name'); do
+            if [[ "$a" == *.exe && "$a" != "$FILE" ]]; then gh release delete-asset latest "$a" -y; fi
+          done
           gh release edit latest --title "업무 툴바 최신판 (v${{ steps.ver.outputs.version }})" \
-            --notes "버전 v${{ steps.ver.outputs.version }} · 커밋 ${GITHUB_SHA::7}. WorkToolbar-portable.exe 를 받아 실행하세요. 이전 버전이 실행 중이면 트레이 아이콘에서 먼저 종료하세요."
+            --notes "버전 v${{ steps.ver.outputs.version }} · 커밋 ${GITHUB_SHA::7}. $FILE 를 받아 실행하세요. 이전 버전이 실행 중이면 새 버전이 알아서 끄고 바뀝니다."

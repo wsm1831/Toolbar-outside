@@ -360,12 +360,10 @@
     awakeBtn.classList.toggle('on', st.on);
     awakeBtn.classList.toggle('paused', !st.on && st.enabled && st.quiet);
     awakeBtn.setAttribute('aria-pressed', String(st.on));
-    awakeBtn.dataset.tip = st.on
-      ? '화면 보호기 차단 켜짐 (누르면 끔)'
-      : st.enabled && st.quiet
-        ? `소등 시간 ${st.quietText} · 누르면 지금 켬`
-        : '화면 보호기 차단 꺼짐 (누르면 켬)';
-    if (!tip.hidden && awakeBtn.matches(':hover')) showTip(awakeBtn);
+    // 마우스를 올려도 설명은 띄우지 않는다 (화면 읽기 프로그램용 이름만 바꿈)
+    awakeBtn.setAttribute('aria-label', st.on
+      ? '화면 보호기 차단 켜짐'
+      : st.enabled && st.quiet ? `화면 보호기 차단 소등 시간 ${st.quietText}` : '화면 보호기 차단 꺼짐');
   }
   awakeBtn.addEventListener('click', async () => renderAwake(await api.toggleAwake()));
   api.onAwake(renderAwake);

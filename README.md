@@ -33,11 +33,12 @@ Windows 11 화면 아래, 작업 표시줄 바로 위에 떠 있는 둥근 독(d
 
 ## 실행 파일 받기
 
-항상 같은 주소에서 최신판을 받을 수 있습니다:
-**https://github.com/wsm1831/Toolbar-outside/releases/download/latest/WorkToolbar-portable.exe**
+아래 배포 페이지에서 최신판 **Toolbar-outside-v버전.exe** (예: `Toolbar-outside-v0.7.2.exe`)를 받습니다. 파일 이름에 버전이 들어가고, 새 버전을 만들면 예전 파일은 지워집니다:
+**https://github.com/wsm1831/Toolbar-outside/releases/tag/latest**
 
-- 새 실행 파일은 자동으로 만들어지지 않습니다. 저장소의 **Actions** 탭 → 왼쪽 **Windows 실행 파일 만들기** → 오른쪽 **Run workflow** → 초록 **Run workflow** 버튼을 누르면 3~4분 뒤 위 주소의 파일이 새 버전으로 바뀝니다.
+- 새 실행 파일은 자동으로 만들어지지 않습니다. 저장소의 **Actions** 탭 → 왼쪽 **Windows 실행 파일 만들기** → 오른쪽 **Run workflow** → 초록 **Run workflow** 버튼을 누르면 3~4분 뒤 위 배포 페이지에 새 버전 파일이 올라옵니다.
 - 설치 없이 바로 실행됩니다. 처음 실행할 때 SmartScreen 경고가 나오면 "추가 정보 → 실행"을 누릅니다 (코드 서명이 없는 프로그램이라 나오는 경고).
+- 파일 설명(파일 속성 → 자세히)은 "외부망용 작업도구"입니다.
 - 지금 쓰는 버전은 트레이 아이콘에 마우스를 올리거나 설정 창 제목에서 확인할 수 있습니다.
 - v0.2.1부터는 새 버전을 실행하면 실행 중인 이전 버전이 스스로 꺼지고 새 버전으로 바뀝니다.
 
