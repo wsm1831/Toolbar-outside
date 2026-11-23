@@ -483,7 +483,11 @@
           <button class="btn pdf">PDF로 저장</button>
         </div>
         <p class="muted status" style="margin:8px 0 0" aria-live="polite"></p>
-        <p class="muted" style="margin:6px 0 0">로그인해야 보이는 페이지는 로그인 화면이 저장될 수 있습니다. 그럴 때는 Edge의 '웹 캡처'(Ctrl+Shift+S)를 쓰세요.</p>`));
+        <div class="clip-box" style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(127,127,127,.25)">
+          <p style="margin:0 0 4px"><b>메일·블로그·카페처럼 로그인해야 보이는 페이지</b></p>
+          <p class="muted" style="margin:0 0 8px">스크랩 창(툴바 안의 작은 브라우저)에서 처음 한 번 로그인하고 원하는 글을 연 뒤 저장하세요. 스크롤해야 보이는 아래쪽까지 한 장으로 저장하고, 드래그해 선택한 부분만 복사할 수도 있습니다. 로그인은 다음에도 유지됩니다.</p>
+          <div class="actions" style="margin-top:0"><button class="btn ghost clip">스크랩 창 열기</button></div>
+        </div>`));
       const inp = el.querySelector('#wc-url');
       const status = el.querySelector('.status');
       const clip = (await api.readClipboard() || '').trim();
@@ -502,9 +506,8 @@
         el.querySelectorAll('button').forEach((b) => { b.disabled = false; });
         if (r.ok && format === 'text') {
           // 제목 / (출처) / 본문 / 주소 순서로 복사
-          const head = [r.title, [r.site, r.byline].filter(Boolean).join(' · ')].filter(Boolean).join('\n');
-          await api.writeClipboard(`${head}\n\n${r.text}\n\n출처: ${r.url}`);
-          status.textContent = `내용을 복사했습니다 (${r.text.length.toLocaleString()}자). 한글·워드에 붙여 넣으세요.`;
+          await api.writeClipboard(r.text);
+          status.textContent = `내용을 복사했습니다 (${r.length.toLocaleString()}자). 한글·워드에 붙여 넣으세요.`;
         } else if (r.ok) status.textContent = `${r.bodyOnly ? '본문만' : '원본 화면 그대로'} 저장했습니다: ${r.file}`;
         else if (r.canceled) status.textContent = '저장을 취소했습니다.';
         else status.textContent = `저장하지 못했습니다: ${r.message}`;
@@ -512,6 +515,7 @@
       el.querySelector('.pdf').addEventListener('click', () => go('pdf'));
       el.querySelector('.img').addEventListener('click', () => go('png'));
       el.querySelector('.txt').addEventListener('click', () => go('text'));
+      el.querySelector('.clip').addEventListener('click', () => api.openClip(inp.value.trim()));
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go('pdf'); });
     },
   };
@@ -567,6 +571,7 @@
         const items = st.items.filter((i) => !filter || i.kw === filter).slice(0, 40);
         list.innerHTML = '';
         if (!st.on) { list.innerHTML = '<li class="empty">설정에서 키워드 뉴스 알림을 켜 주세요</li>'; return; }
+        if (!st.keywords.length) { list.innerHTML = '<li class="empty">위 칸에 관심 키워드를 넣으면 관련 기사를 모아 보여 드립니다</li>'; el.querySelector('.news-status').textContent = ''; return; }
         if (!items.length) { list.innerHTML = '<li class="empty">아직 가져온 기사가 없습니다. 잠시 뒤 다시 보거나 새로고침을 누르세요</li>'; return; }
         for (const it of items) {
           const li = document.createElement('li');

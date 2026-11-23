@@ -27,6 +27,11 @@ contextBridge.exposeInMainWorld('api', {
   saveMemo: (text) => ipcRenderer.invoke('memo:save', text),
 
   capturePage: (url, format, opts) => ipcRenderer.invoke('capture:page', url, format, opts),
+  openClip: (url) => ipcRenderer.invoke('clip:open', url),
+  clipCapture: (format, bodyOnly) => ipcRenderer.invoke('clip:capture', format, bodyOnly),
+  clipNav: (action, url) => ipcRenderer.invoke('clip:nav', action, url),
+  clipState: () => ipcRenderer.invoke('clip:state'),
+  onClipState: (cb) => ipcRenderer.on('clip:state', (e, st) => cb(st)),
   vworldSearch: (q) => ipcRenderer.invoke('vworld:search', q),
   vworldParcel: (x, y) => ipcRenderer.invoke('vworld:parcel', x, y),
   getHolidays: () => ipcRenderer.invoke('holidays:get'),

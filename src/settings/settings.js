@@ -324,7 +324,7 @@
       for (const name of await api.weatherCities()) sel.add(new Option(name, name));
     }
     sel.value = w.city;
-    const n = { on: true, keywords: ['산업단지', '산단 개발', '토지보상'], notify: true, ...(cfg.news || {}) };
+    const n = { on: true, keywords: [], notify: true, ...(cfg.news || {}) };
     $('#news-on').checked = n.on;
     $('#news-notify').checked = n.notify;
     $('#news-kw').value = n.keywords.join('\n');

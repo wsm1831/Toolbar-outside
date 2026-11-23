@@ -1,5 +1,5 @@
 {
-  "version": 19,
+  "version": 20,
   "appearance": {
     "idleOpacity": 0.35
   },
@@ -18,11 +18,7 @@
   },
   "news": {
     "on": true,
-    "keywords": [
-      "산업단지",
-      "산단 개발",
-      "토지보상"
-    ],
+    "keywords": [],
     "notify": true
   },
   "laws": {
@@ -92,34 +88,16 @@
           "target": "https://gemini.google.com"
         },
         {
-          "id": "copilot",
-          "name": "Microsoft Copilot",
-          "type": "url",
-          "target": "https://copilot.microsoft.com"
-        },
-        {
           "id": "perplexity",
           "name": "Perplexity (검색형 AI)",
           "type": "url",
           "target": "https://www.perplexity.ai"
         },
         {
-          "id": "wrtn",
-          "name": "뤼튼",
-          "type": "url",
-          "target": "https://wrtn.ai"
-        },
-        {
           "id": "notebooklm",
           "name": "NotebookLM (문서 요약·질문)",
           "type": "url",
           "target": "https://notebooklm.google.com"
-        },
-        {
-          "id": "deepl",
-          "name": "DeepL 번역",
-          "type": "url",
-          "target": "https://www.deepl.com/translator"
         },
         {
           "id": "github",
