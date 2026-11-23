@@ -1,5 +1,5 @@
 {
-  "version": 21,
+  "version": 22,
   "appearance": {
     "idleOpacity": 0.35
   },
@@ -19,11 +19,11 @@
   "news": {
     "on": true,
     "keywords": [],
-    "notify": true
+    "notify": false
   },
   "laws": {
     "on": true,
-    "notify": true,
+    "notify": false,
     "items": [
       "산업입지 및 개발에 관한 법률",
       "산업집적활성화 및 공장설립에 관한 법률",
@@ -277,7 +277,8 @@
           "id": "kakaomap",
           "name": "카카오맵",
           "type": "url",
-          "target": "https://map.kakao.com"
+          "target": "https://map.kakao.com",
+          "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+CiAgPHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjQ0IiByeD0iMTIiIGZpbGw9IiNGRUU1MDAiLz4KICA8cGF0aCBkPSJNMjQgOS41Yy02LjkgMC0xMi4zIDUuMy0xMi4zIDEyIDAgOC42IDEwLjMgMTYuMiAxMS40IDE3YTEuNSAxLjUgMCAwIDAgMS44IDBjMS4xLS44IDExLjQtOC40IDExLjQtMTcgMC02LjctNS40LTEyLTEyLjMtMTJ6IiBmaWxsPSIjM0ExRDFEIi8+CiAgPGNpcmNsZSBjeD0iMjQiIGN5PSIyMS42IiByPSI0LjYiIGZpbGw9IiNGRUU1MDAiLz4KPC9zdmc+Cg=="
         },
         {
           "id": "korail",

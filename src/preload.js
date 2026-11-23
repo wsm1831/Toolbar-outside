@@ -47,6 +47,8 @@ contextBridge.exposeInMainWorld('api', {
   getNews: () => ipcRenderer.invoke('news:get'),
   refreshNews: () => ipcRenderer.invoke('news:refresh'),
   setNewsKeywords: (list) => ipcRenderer.invoke('news:setKeywords', list),
+  clearNews: () => ipcRenderer.invoke('news:clear'),
+  clearLaws: () => ipcRenderer.invoke('laws:clear'),
   readNews: (link) => ipcRenderer.invoke('news:read', link),
   onNews: (cb) => ipcRenderer.on('news:update', (e, st) => cb(st)),
   getWeather: () => ipcRenderer.invoke('weather:get'),

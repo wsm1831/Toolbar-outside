@@ -542,6 +542,7 @@
           <span style="display:flex;gap:6px">
             <button class="btn ghost refresh">새로고침</button>
             <button class="btn ghost readall">모두 읽음</button>
+            <button class="btn ghost clearall">모두 지우기</button>
           </span>
         </div>`));
       const list = el.querySelector('.newslist');
@@ -568,7 +569,7 @@
           kwBox.appendChild(b);
         }
         current = st;
-        const items = st.items.filter((i) => !filter || i.kw === filter).slice(0, 40);
+        const items = st.items.filter((i) => !filter || i.kw === filter);
         list.innerHTML = '';
         if (!st.on) { list.innerHTML = '<li class="empty">설정에서 키워드 뉴스 알림을 켜 주세요</li>'; return; }
         if (!st.keywords.length) { list.innerHTML = '<li class="empty">위 칸에 관심 키워드를 넣으면 관련 기사를 모아 보여 드립니다</li>'; el.querySelector('.news-status').textContent = ''; return; }
@@ -602,6 +603,10 @@
       el.querySelector('.kw-add').addEventListener('click', addKw);
       kwIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') addKw(); });
       el.querySelector('.readall').addEventListener('click', () => api.readNews('*'));
+      el.querySelector('.clearall').addEventListener('click', async () => {
+        if (!confirm('목록의 기사를 모두 지울까요? 지운 기사는 다시 나타나지 않습니다.')) return;
+        draw(await api.clearNews());
+      });
       el.querySelector('.refresh').addEventListener('click', async (e) => {
         e.target.disabled = true; el.querySelector('.news-status').textContent = '가져오는 중…';
         await api.refreshNews(); e.target.disabled = false;
@@ -799,6 +804,7 @@
           <span style="display:flex;gap:6px">
             <button class="btn ghost refresh">새로고침</button>
             <button class="btn ghost readall">모두 읽음</button>
+            <button class="btn ghost clearall">모두 지우기</button>
           </span>
         </div>`));
       const open = (mst) => api.openItem({ type: 'url', target: `https://www.law.go.kr/lsInfoP.do?lsiSeq=${encodeURIComponent(mst)}` });
@@ -834,6 +840,10 @@
       draw(await api.getLaws());
       window.__lawsPanelDraw = draw;
       el.querySelector('.readall').addEventListener('click', () => api.readLaws());
+      el.querySelector('.clearall').addEventListener('click', async () => {
+        if (!confirm('개정 알림 목록을 모두 지울까요?')) return;
+        draw(await api.clearLaws());
+      });
       el.querySelector('.refresh').addEventListener('click', async (e) => {
         e.target.disabled = true; el.querySelector('.law-status').textContent = '확인하는 중…';
         await api.refreshLaws(); e.target.disabled = false;

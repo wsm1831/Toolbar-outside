@@ -319,12 +319,8 @@
     const w = { on: true, city: '서울', air: true, ...(cfg.weather || {}) };
     $('#weather-on').checked = w.on;
     $('#weather-air').checked = w.air;
-    const sel = $('#weather-city');
-    if (!sel.options.length) {
-      for (const name of await api.weatherCities()) sel.add(new Option(name, name));
-    }
     setWeatherOption(w);
-    const n = { on: true, keywords: [], notify: true, ...(cfg.news || {}) };
+    const n = { on: true, keywords: [], notify: false, ...(cfg.news || {}) };
     $('#news-on').checked = n.on;
     $('#news-notify').checked = n.notify;
     $('#news-kw').value = n.keywords.join('\n');
@@ -332,7 +328,7 @@
     $('#key-law').value = (cfg.keys && cfg.keys.lawOC) || '';
     $('#key-data').value = (cfg.keys && cfg.keys.dataGoKr) || '';
     showHol(await api.getHolidays());
-    const L = { on: true, notify: true, items: ['산업입지 및 개발에 관한 법률', '산업집적활성화 및 공장설립에 관한 법률', '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률', '국토의 계획 및 이용에 관한 법률'], ...(cfg.laws || {}) };
+    const L = { on: true, notify: false, items: ['산업입지 및 개발에 관한 법률', '산업집적활성화 및 공장설립에 관한 법률', '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률', '국토의 계획 및 이용에 관한 법률'], ...(cfg.laws || {}) };
     $('#laws-on').checked = L.on;
     $('#laws-notify').checked = L.notify;
     $('#laws-items').value = L.items.join('\n');
@@ -350,22 +346,14 @@
     markDirty();
   };
   ['#quiet-on', '#quiet-start', '#quiet-end'].forEach((s) => $(s).addEventListener('change', quietSync));
-  // 직접 찾은 지역(lat·lon이 있는 것)은 목록 맨 위의 '찾은 지역' 칸으로 보여 준다
-  let customPlace = null;
+  // 날씨 지역: 찾기로 고른 지역(이름·좌표)만 쓴다. 예전 설정의 목록 지역(이름만)도 그대로 동작
+  let place = null;
   function setWeatherOption(w) {
-    const sel = $('#weather-city');
-    const old = sel.querySelector('option[value="__custom"]');
-    if (old) old.remove();
-    customPlace = (w.lat && w.lon) ? { city: w.city, full: w.full || w.city, lat: w.lat, lon: w.lon } : null;
-    if (customPlace) {
-      sel.add(new Option(`${customPlace.full} (찾은 지역)`, '__custom'), 0);
-      sel.value = '__custom';
-    } else sel.value = w.city;
+    place = { city: w.city, ...(w.lat && w.lon ? { full: w.full || w.city, lat: w.lat, lon: w.lon } : {}) };
+    $('#weather-cur').textContent = place.full || place.city;
   }
   const weatherSync = () => {
-    const v = $('#weather-city').value;
-    if (v !== '__custom') { const o = $('#weather-city option[value="__custom"]'); if (o) o.remove(); customPlace = null; }
-    cfg.weather = { on: $('#weather-on').checked, air: $('#weather-air').checked, ...(customPlace || { city: v }) };
+    cfg.weather = { on: $('#weather-on').checked, air: $('#weather-air').checked, ...place };
     markDirty();
   };
   async function findPlace() {
@@ -393,7 +381,6 @@
   $('#weather-find').addEventListener('click', findPlace);
   $('#weather-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); findPlace(); } });
   $('#weather-on').addEventListener('change', weatherSync);
-  $('#weather-city').addEventListener('change', weatherSync);
   $('#weather-air').addEventListener('change', weatherSync);
   const newsSync = () => {
     cfg.news = {

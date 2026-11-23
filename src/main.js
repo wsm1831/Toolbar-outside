@@ -161,6 +161,11 @@ function migrateConfig(cfg) {
     next.categories.splice(Math.min(at, next.categories.length), 0, biz, work);
     next.categories.push(quick);
   }
+  if (from < 22) {
+    // v22: Windows 알림은 기본으로 끔
+    if (next.news) next.news = { ...next.news, notify: false };
+    if (next.laws) next.laws = { ...next.laws, notify: false };
+  }
   writeConfig(next);
   return next;
 }
@@ -862,7 +867,7 @@ async function clipCapture(format, bodyOnly) {
 // ---------- 키워드 뉴스 알림 (구글 뉴스 RSS) ----------
 const NEWS_FILE = () => userFile('news.json');
 let newsState = null; // { items: [{ link, title, source, date, kw, read }], first: bool }
-function newsCfg() { return { on: true, keywords: [], notify: true, ...(config.news || {}) }; }
+function newsCfg() { return { on: true, keywords: [], notify: false, ...(config.news || {}) }; }
 function loadNews() {
   if (newsState) return newsState;
   try { newsState = JSON.parse(fs.readFileSync(NEWS_FILE(), 'utf8')); } catch { newsState = { items: [], first: true }; }
@@ -895,23 +900,32 @@ function sendNews() { if (dockWin && !dockWin.isDestroyed()) dockWin.webContents
 async function refreshNews() {
   const cfg = newsCfg(); const st = loadNews();
   if (!cfg.on || !cfg.keywords.length) { sendNews(); return; }
-  const known = new Set(st.items.map((i) => i.link));
+  // seen: 한 번이라도 본 기사 주소 (목록에서 빠지거나 지운 기사가 다시 '새 기사'로 뜨지 않게)
+  // kwSeen: 한 번이라도 가져온 키워드 (새로 넣은 키워드의 지난 기사는 읽음으로 처리)
+  st.seen = st.seen || st.items.map((i) => i.link);
+  st.kwSeen = st.kwSeen || [...new Set(st.items.map((i) => i.kw))];
+  const seen = new Set(st.seen);
+  const oldest = Date.now() - 14 * 86400000; // 2주 넘은 기사는 받지 않는다
   const fresh = [];
   for (const kw of cfg.keywords) {
+    const firstTime = !st.kwSeen.includes(kw);
     try {
       const res = await fetchWithTimeout(`https://news.google.com/rss/search?q=${encodeURIComponent(kw)}&hl=ko&gl=KR&ceid=KR:ko`, 15000);
       if (!res.ok) continue;
       for (const it of parseRss(await res.text(), kw)) {
-        if (known.has(it.link)) continue;
-        known.add(it.link);
-        fresh.push({ ...it, read: !!st.first }); // 처음 한 번은 쌓여 있던 기사를 모두 읽음으로
+        if (seen.has(it.link)) continue;
+        seen.add(it.link);
+        if (it.date <= oldest) continue;
+        fresh.push({ ...it, read: firstTime }); // 처음 가져온 키워드는 쌓여 있던 기사를 모두 읽음으로
       }
+      if (firstTime) st.kwSeen.push(kw);
     } catch { /* 한 키워드가 실패해도 다음 키워드 계속 */ }
   }
-  const weekAgo = Date.now() - 14 * 86400000;
-  st.items = [...fresh, ...st.items].filter((i) => i.date > weekAgo).sort((a, b) => b.date - a.date).slice(0, 80);
-  const newOnes = fresh.filter((i) => !i.read);
-  if (st.first && fresh.length) st.first = false;
+  st.items = [...fresh, ...st.items].filter((i) => i.date > oldest).sort((a, b) => b.date - a.date).slice(0, 80);
+  st.seen = [...seen].slice(-3000);
+  st.first = false;
+  const kept = new Set(st.items.map((i) => i.link));
+  const newOnes = fresh.filter((i) => !i.read && kept.has(i.link)); // 실제 목록에 남은 새 기사만 센다
   saveNews();
   sendNews();
   if (cfg.notify && newOnes.length && Notification.isSupported()) {
@@ -993,7 +1007,7 @@ async function vworldParcel(x, y) {
 const LAWS_FILE = () => userFile('laws.json');
 let lawsState = null; // { known: { 법령명: { mst, prom, enf, kind } }, events: [...], checkedAt, error }
 const DEFAULT_LAWS = ['산업입지 및 개발에 관한 법률', '산업집적활성화 및 공장설립에 관한 법률', '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률', '국토의 계획 및 이용에 관한 법률'];
-function lawsCfg() { return { on: true, notify: true, items: DEFAULT_LAWS, ...(config.laws || {}) }; }
+function lawsCfg() { return { on: true, notify: false, items: DEFAULT_LAWS, ...(config.laws || {}) }; }
 function loadLaws() {
   if (lawsState) return lawsState;
   try { lawsState = JSON.parse(fs.readFileSync(LAWS_FILE(), 'utf8')); } catch { lawsState = { known: {}, events: [] }; }
@@ -1378,6 +1392,8 @@ function registerIpc() {
     refreshNews();
     return newsPublic();
   });
+  ipcMain.handle('news:clear', () => { const st = loadNews(); st.items = []; saveNews(); sendNews(); return newsPublic(); });
+  ipcMain.handle('laws:clear', () => { const st = loadLaws(); st.events = []; saveLaws(); sendLaws(); return lawsPublic(); });
   ipcMain.handle('news:read', (e, link) => {
     const st = loadNews();
     for (const i of st.items) if (link === '*' || i.link === link) i.read = true;
@@ -1431,10 +1447,12 @@ if (!app.requestSingleInstanceLock(instanceInfo)) {
     refreshWeather();
     setInterval(refreshWeather, 30 * 60 * 1000);
     setTimeout(refreshNews, 8000);
-    setTimeout(refreshLaws, 20000);
+    // 법령 개정은 하루에 한 번만 확인 (마지막 확인 후 24시간이 지났을 때만)
+    const lawsDaily = () => { if (Date.now() - (loadLaws().checkedAt || 0) >= 23.5 * 3600000) refreshLaws(); else sendLaws(); };
+    setTimeout(lawsDaily, 20000);
     setTimeout(() => refreshHolidays(false), 12000);
     setInterval(() => refreshHolidays(false), 24 * 60 * 60 * 1000);
-    setInterval(refreshLaws, 6 * 60 * 60 * 1000);
+    setInterval(lawsDaily, 60 * 60 * 1000);
     setInterval(refreshNews, 30 * 60 * 1000);
     powerMonitor.on('resume', () => { setTimeout(refreshWeather, 5000); setTimeout(refreshNews, 15000); });
     screen.on('display-metrics-changed', placeDock);

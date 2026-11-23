@@ -485,16 +485,11 @@ body.awake #dock { opacity: 1; }
 /* 키워드 뉴스 */
 .tile .badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 18px;
-  color: #fff;
+  top: 3px;
+  right: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
   background: #E5484D;
   box-shadow: 0 0 0 2px var(--glass);
   pointer-events: none;

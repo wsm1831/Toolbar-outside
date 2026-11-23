@@ -161,6 +161,7 @@
     b.className = 'tile tile-quick';
     b.dataset.tip = item.name;
     b.dataset.qid = item.id;
+    if (item.type === 'tool') b.dataset.tool = item.target;
     b.setAttribute('aria-label', item.name);
     renderItemIcon(b, item, cat.color || '#9C7CF0');
     b.addEventListener('click', () => {
@@ -196,18 +197,22 @@
   // 키워드 뉴스: 안 읽은 기사 수를 해당 아이콘에 빨간 숫자로
   let newsNow = { unread: 0 };
   let lawsNow = { unread: 0 };
+  // 새 내용이 있으면 아이콘 오른쪽 위에 빨간 점: 그 도구 아이콘(바로가기·튀어오른 메뉴)과, 그 도구가 든 카테고리 아이콘
   function drawNewsBadge() {
     document.querySelectorAll('.tile .badge').forEach((b) => b.remove());
-    for (const [qid, n] of [['news', newsNow.unread], ['laws', lawsNow.unread]]) {
-      if (!n) continue;
-      // 바로가기에 있으면 그 아이콘에, 아니면 그 도구가 들어 있는 카테고리 아이콘에
-      const owner = (config.categories || []).find((c) => !c.pinned && (c.items || []).some((it) => it.type === 'tool' && it.target === qid));
-      const tile = dock.querySelector(`[data-qid="${qid}"]`) || (owner && dock.querySelector(`.tile-cat[data-id="${CSS.escape(owner.id)}"]`));
-      if (!tile || tile.querySelector('.badge')) continue;
+    const dot = (tile) => {
+      if (!tile || tile.querySelector('.badge')) return;
       const b = document.createElement('span');
       b.className = 'badge';
-      b.textContent = n > 99 ? '99+' : n;
+      b.setAttribute('aria-hidden', 'true');
       tile.appendChild(b);
+    };
+    for (const [tool, n] of [['news', newsNow.unread], ['laws', lawsNow.unread]]) {
+      if (!n) continue;
+      document.querySelectorAll(`.tile[data-tool="${tool}"]`).forEach(dot);
+      for (const c of config.categories || []) {
+        if (!c.pinned && (c.items || []).some((it) => it.type === 'tool' && it.target === tool)) dot(dock.querySelector(`.tile-cat[data-id="${CSS.escape(c.id)}"]`));
+      }
     }
   }
   api.onLaws((st) => {
@@ -296,6 +301,7 @@
       b.dataset.tip = item.name;
       b.setAttribute('aria-label', item.name);
       renderItemIcon(b, item, cat.color || '#5B6B8C');
+      if (item.type === 'tool') b.dataset.tool = item.target;
       b.addEventListener('click', () => activate(item, cat));
       row.appendChild(b);
     });
@@ -303,6 +309,7 @@
     notch.className = 'notch';
     pop.append(row, notch);
     anchorPop(catButton(id));
+    drawNewsBadge();
   }
 
   async function activate(item, cat, anchor) {
