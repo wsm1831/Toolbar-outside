@@ -1,7 +1,7 @@
 {
   "name": "toolbar-outside",
   "productName": "WorkToolbar",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "외부망용 작업도구",
   "main": "src/main.js",
   "private": true,

@@ -587,6 +587,11 @@ function articleHtml(art, url) {
   a { color: inherit; } table { border-collapse: collapse; } td, th { border: 1px solid #ccc; padding: 4px 8px; }
   .src { margin-top: 32px; padding-top: 10px; border-top: 1px solid #ddd; color: #888; font-size: 12px; word-break: break-all; }
   @page { margin: 16mm 14mm; }
+  /* 원래 페이지가 고정해 둔 높이·위치 때문에 생기는 큰 빈칸 없애기 */
+  body * { height: auto !important; min-height: 0 !important; max-height: none !important; position: static !important; float: none !important; }
+  * { break-inside: auto !important; page-break-inside: auto !important; }
+  img { max-height: 250mm !important; object-fit: contain; break-inside: avoid !important; }
+  p, li, h2, h3 { orphans: 2; widows: 2; }
 </style></head><body><h1>${escHtml(art.title)}</h1><div class="meta">${meta}</div>${art.content}<p class="src">출처: ${escHtml(url)}</p></body></html>`;
 }
 
@@ -623,19 +628,48 @@ async function shootFull(wc, measureJs) {
   }
 }
 
-// PNG를 A4 PDF로 (세로로 긴 그림은 여러 쪽으로 나뉜다)
-async function pngToPdf(png, width) {
-  const win = hiddenWin(Math.max(width, 400));
+// PNG를 A4 PDF로. 크롬에 쪽 나누기를 맡기면 빈칸이 크게 생기거나 글줄이 잘리므로,
+// 한 쪽 높이만큼씩 직접 자르되 잘리는 자리는 글자가 없는 빈 줄(한 가지 색으로 된 가로줄)로 맞춘다.
+async function pngToPdf(png) {
+  const img = nativeImage.createFromBuffer(png);
+  const { width: W, height: H } = img.getSize();
+  const bmp = img.toBitmap(); // BGRA
+  const pageH = Math.floor(W * 1.44); // A4(여백 8mm) 인쇄 영역 비율 194×281mm
+  const blank = (y) => {
+    const o = y * W * 4; const step = 3 * 4;
+    const b0 = bmp[o], g0 = bmp[o + 1], r0 = bmp[o + 2];
+    for (let i = o; i < o + W * 4; i += step) {
+      if (Math.abs(bmp[i] - b0) + Math.abs(bmp[i + 1] - g0) + Math.abs(bmp[i + 2] - r0) > 24) return false;
+    }
+    return true;
+  };
+  const slices = [];
+  for (let y = 0; y < H;) {
+    let end = Math.min(y + pageH, H);
+    if (end < H) {
+      // 쪽 끝에서 위로 최대 25%까지 빈 줄을 찾는다 (못 찾으면 그냥 자름)
+      for (let t = end; t > end - pageH * 0.25; t--) if (blank(t)) { end = t; break; }
+    }
+    slices.push([y, end]);
+    y = end;
+  }
+  const names = slices.map(([y, end], i) => {
+    const name = `capture-tmp-${i}.png`;
+    fs.writeFileSync(userFile(name), img.crop({ x: 0, y, width: W, height: end - y }).toPNG());
+    return name;
+  });
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:8mm}html,body{margin:0}
+.pg{break-after:page;page-break-after:always}.pg:last-child{break-after:auto;page-break-after:auto}img{width:100%;display:block}</style></head>
+<body>${names.map((n) => `<div class="pg"><img src="${n}"></div>`).join('')}</body></html>`;
+  fs.writeFileSync(userFile('capture-tmp.html'), html, 'utf8');
+  const win = hiddenWin(Math.max(W, 400));
   try {
-    const tmp = userFile('capture-tmp.png');
-    fs.writeFileSync(tmp, png);
-    const html = `<!doctype html><html><head><meta charset="utf-8"><style>@page{margin:8mm}html,body{margin:0}img{width:100%;display:block}</style></head><body><img src="capture-tmp.png"></body></html>`;
-    fs.writeFileSync(userFile('capture-tmp.html'), html, 'utf8');
     await win.loadFile(userFile('capture-tmp.html'));
-    await win.webContents.executeJavaScript('new Promise((d) => { const i = document.images[0]; if (i.complete) d(); else { i.onload = d; i.onerror = d; } })');
-    return await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4' });
+    await win.webContents.executeJavaScript('Promise.all([...document.images].map((i) => i.complete ? 0 : new Promise((d) => { i.onload = d; i.onerror = d; })))');
+    return await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4', preferCSSPageSize: true });
   } finally {
     if (!win.isDestroyed()) win.destroy();
+    for (const n of names) fs.rm(userFile(n), () => {});
   }
 }
 
@@ -860,7 +894,7 @@ async function clipCapture(format, bodyOnly) {
   } finally {
     for (const f of frames) await f.executeJavaScript(RESTORE_JS).catch(() => 0);
   }
-  const data = format === 'pdf' ? await pngToPdf(shot.data, shot.width) : shot.data;
+  const data = format === 'pdf' ? await pngToPdf(shot.data) : shot.data;
   return { ...(await saveFile(data, format, wc.getTitle(), clipWin)), bodyOnly: false, cut: shot.height >= 30000 };
 }
 
