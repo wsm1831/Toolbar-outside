@@ -14,3 +14,8 @@ button:disabled { opacity: .45; cursor: default; }
 .btn { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; white-space: nowrap; }
 .btn.ghost { background: #fff; color: var(--accent); border-color: var(--line); }
 .btn.ghost:hover:not(:disabled) { border-color: var(--accent); }
+.msg { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #2F7A5C; }
+.msg.bad { color: #B23B3B; }
+
+/* 줄바꿈은 단어 단위로 (한글이 글자 중간에서 끊기지 않게). 아주 긴 주소만 어디서든 끊는다 */
+html, body { word-break: keep-all; overflow-wrap: anywhere; }

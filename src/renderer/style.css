@@ -570,3 +570,6 @@ body.tool-window .panel,
 body.tool-window .panel.wide { width: 100%; max-height: none; min-height: 100%; overflow: visible; border: 0; border-radius: 0; box-shadow: none; animation: none; padding: 16px 18px 18px; }
 body.tool-window .pc-tablewrap { max-height: none; }
 body.tool-window #toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); }
+
+/* 줄바꿈은 단어 단위로 (한글이 글자 중간에서 끊기지 않게). 아주 긴 주소만 어디서든 끊는다 */
+html, body { word-break: keep-all; overflow-wrap: anywhere; }

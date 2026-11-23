@@ -226,3 +226,6 @@ body.sorting, body.sorting * { cursor: grabbing !important; user-select: none; }
 .wres button { display: block; width: 100%; padding: 6px 10px; border: 0; border-radius: 6px; background: transparent; text-align: left; }
 .wres button:hover, .wres button:focus-visible { background: #EEF1F6; }
 .wres .empty { padding: 6px 10px; color: var(--ink-dim); }
+
+/* 줄바꿈은 단어 단위로 (한글이 글자 중간에서 끊기지 않게). 아주 긴 주소만 어디서든 끊는다 */
+html, body { word-break: keep-all; overflow-wrap: anywhere; }
