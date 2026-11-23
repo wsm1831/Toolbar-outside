@@ -568,3 +568,10 @@ body.awake #dock { opacity: 1; }
   #pop .row, #pop .row .tile, .panel, #pop.closing .row { animation-duration: 0.01ms !important; animation-delay: 0ms !important; }
   .tile, #dock { transition: none; }
 }
+
+/* ---------- 따로 뜨는 도구 창 (tool.html) ---------- */
+body.tool-window { background: var(--glass); overflow: auto; user-select: text; }
+body.tool-window .panel,
+body.tool-window .panel.wide { width: 100%; max-height: none; min-height: 100%; overflow: visible; border: 0; border-radius: 0; box-shadow: none; animation: none; padding: 16px 18px 18px; }
+body.tool-window .pc-tablewrap { max-height: none; }
+body.tool-window #toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); }

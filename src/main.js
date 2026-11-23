@@ -142,6 +142,25 @@ function migrateConfig(cfg) {
       next.news = { ...next.news, keywords: next.news.keywords.filter((k) => !['산업단지', '산단 개발', '토지보상'].includes(k)) };
     }
   }
+  if (from < 21 && from >= 2 && !next.categories.some((c) => c.id === 'biz' || c.id === 'work')) {
+    // v21: '유틸리티'를 '업무 도구'(뉴스·법령·필지)와 '작업 도구'로 나누고, 툴바 바로가기는 메모·클립보드·캡처·웹페이지 저장만
+    const defCat = (id) => def.categories.find((c) => c.id === id);
+    const utils = next.categories.find((c) => c.id === 'utils');
+    const pinned = next.categories.find((c) => c.pinned);
+    const mine = new Map();
+    for (const c of [utils, pinned]) for (const it of ((c && c.items) || [])) mine.set(it.id, it);
+    const pick = (d) => d.items.map((it) => mine.get(it.id) || it); // 이미 있던 항목은 고친 이름·아이콘 그대로
+    const defIds = new Set(['biz', 'work', 'quick'].flatMap((id) => defCat(id).items.map((it) => it.id)));
+    const extraUtils = ((utils && utils.items) || []).filter((it) => !defIds.has(it.id)); // 직접 넣은 항목은 작업 도구로
+    const extraPinned = ((pinned && pinned.items) || []).filter((it) => !defIds.has(it.id));
+    const biz = { ...defCat('biz'), items: pick(defCat('biz')) };
+    const work = { ...defCat('work'), color: (utils && utils.color) || defCat('work').color, items: [...pick(defCat('work')), ...extraUtils] };
+    const quick = { ...(pinned || defCat('quick')), items: [...pick(defCat('quick')), ...extraPinned] };
+    const at = utils ? next.categories.indexOf(utils) : (pinned ? next.categories.indexOf(pinned) : next.categories.length);
+    next.categories = next.categories.filter((c) => c !== utils && c !== pinned);
+    next.categories.splice(Math.min(at, next.categories.length), 0, biz, work);
+    next.categories.push(quick);
+  }
   writeConfig(next);
   return next;
 }
@@ -423,7 +442,10 @@ function airGrade(pm10, pm25) {
 async function refreshWeather() {
   const w = weatherCfg();
   if (!w.on) { weatherState = null; sendWeather(); return; }
-  const city = CITIES.find((c) => c.name === w.city) || CITIES[0];
+  // 설정에서 직접 찾은 지역은 좌표(lat·lon)를 같이 저장해 둔다
+  const city = (Number.isFinite(w.lat) && Number.isFinite(w.lon))
+    ? { name: w.city, full: w.full || w.city, lat: w.lat, lon: w.lon }
+    : (CITIES.find((c) => c.name === w.city) || CITIES[0]);
   const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + city.lat + '&longitude=' + city.lon +
     '&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&forecast_days=1';
   try {
@@ -432,6 +454,7 @@ async function refreshWeather() {
     const j = await res.json();
     weatherState = {
       city: city.name,
+      full: city.full || city.name,
       temp: j.current.temperature_2m,
       code: j.current.weather_code,
       isDay: j.current.is_day === 1,
@@ -455,6 +478,40 @@ async function refreshWeather() {
     if (!weatherState || weatherState.city !== city.name) weatherState = { city: city.name, error: true };
   }
   sendWeather();
+}
+// 목록에 없는 지역 찾기: 내장 목록 + 브이월드 행정구역(인증키가 있을 때) + Open-Meteo 지명 검색
+async function weatherSearch(q) {
+  q = String(q || '').trim();
+  if (!q) return [];
+  const out = [];
+  for (const c of CITIES) if (c.name.includes(q) || q.includes(c.name)) out.push({ full: c.name, lat: c.lat, lon: c.lon });
+  if (config.keys && config.keys.vworld) {
+    for (const cat of ['L4', 'L2', 'L3']) { // 읍면동, 시군구, 일반구
+      try {
+        const r = await vworldGet(`/req/search?service=search&request=search&version=2.0&crs=EPSG:4326&size=10&page=1&type=district&category=${cat}&query=${encodeURIComponent(q)}`);
+        for (const it of (r && r.result && r.result.items) || []) {
+          const lat = Number(it.point && it.point.y); const lon = Number(it.point && it.point.x);
+          if (it.title && Number.isFinite(lat) && Number.isFinite(lon)) out.push({ full: it.title, lat, lon });
+        }
+      } catch { /* 키가 틀려도 다른 검색은 계속 */ }
+    }
+  }
+  try {
+    const res = await fetchWithTimeout(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=ko&countryCode=KR&format=json`, 10000);
+    const j = await res.json();
+    for (const r of j.results || []) {
+      const parts = [];
+      for (const p of [r.admin1, r.admin2, r.admin3, r.name]) if (p && !parts.includes(p)) parts.push(p);
+      out.push({ full: parts.join(' '), lat: r.latitude, lon: r.longitude });
+    }
+  } catch { /* 인터넷이 안 되면 내장 목록만 */ }
+  const seen = new Set();
+  return out.filter((p) => !seen.has(p.full) && seen.add(p.full)).slice(0, 15).map((p) => {
+    // 툴바에 보일 짧은 이름: 마지막 단어 (김천시 → 김천, 율곡동은 그대로)
+    let name = p.full.split(' ').pop();
+    if (/^..+[시군]$/.test(name) && name.length > 2) name = name.slice(0, -1);
+    return { ...p, name };
+  });
 }
 function sendWeather() {
   if (dockWin && !dockWin.isDestroyed()) dockWin.webContents.send('weather:update', weatherState);
@@ -712,6 +769,22 @@ const RESTORE_JS = `(() => {
   window.__clipRestore = null;
   if (window.__clipScroll) window.scrollTo(...window.__clipScroll);
 })()`;
+
+// ---------- 따로 뜨는 도구 창 (필지 조회 등) ----------
+const toolWins = new Map();
+function openToolWindow(id, name, color) {
+  const old = toolWins.get(id);
+  if (old && !old.isDestroyed()) { if (old.isMinimized()) old.restore(); old.show(); old.focus(); return; }
+  const size = { parcel: [620, 760] }[id] || [480, 640];
+  const win = new BrowserWindow({
+    width: size[0], height: size[1], minWidth: 420, minHeight: 360,
+    title: name || id, icon: ICON_PATH, autoHideMenuBar: true, backgroundColor: '#1E2534',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
+  });
+  win.loadFile(path.join(__dirname, 'renderer', 'tool.html'), { query: { tool: id, name: name || '', color: color || '' } });
+  toolWins.set(id, win);
+  win.on('closed', () => toolWins.delete(id));
+}
 
 let clipWin = null;
 let clipView = null;
@@ -1250,6 +1323,7 @@ function registerIpc() {
   ipcMain.handle('capture:page', async (e, url, format, opts) => {
     try { return await capturePage(String(url).trim(), format, opts || {}); } catch (err) { return { ok: false, message: err.message || String(err) }; }
   });
+  ipcMain.handle('tool:window', (e, id, name, color) => { openToolWindow(String(id), String(name || ''), String(color || '')); return true; });
   ipcMain.handle('clip:open', (e, url) => { openClipWindow(String(url || '').trim()); return true; });
   ipcMain.handle('clip:capture', async (e, format, bodyOnly) => {
     try { return await clipCapture(format, !!bodyOnly); } catch (err) { return { ok: false, message: err.message || String(err) }; }
@@ -1311,6 +1385,7 @@ function registerIpc() {
   });
   ipcMain.handle('weather:get', () => weatherState);
   ipcMain.handle('weather:cities', () => CITIES.map((c) => c.name));
+  ipcMain.handle('weather:search', (e, q) => weatherSearch(q));
   ipcMain.handle('weather:refresh', () => refreshWeather());
 
   ipcMain.handle('awake:get', () => awakeState());

@@ -1,5 +1,5 @@
 {
-  "version": 20,
+  "version": 21,
   "appearance": {
     "idleOpacity": 0.35
   },
@@ -307,17 +307,37 @@
       "type": "separator"
     },
     {
-      "id": "utils",
-      "name": "유틸리티",
-      "icon": "sparkles",
-      "color": "#9C7CF0",
+      "id": "biz",
+      "name": "업무 도구",
+      "icon": "briefcase",
+      "color": "#3F8FD8",
       "items": [
+        {
+          "id": "news",
+          "name": "키워드 뉴스",
+          "type": "tool",
+          "target": "news"
+        },
+        {
+          "id": "laws",
+          "name": "법령 개정 알림",
+          "type": "tool",
+          "target": "laws"
+        },
         {
           "id": "parcel",
           "name": "필지 조회",
           "type": "tool",
           "target": "parcel"
-        },
+        }
+      ]
+    },
+    {
+      "id": "work",
+      "name": "작업 도구",
+      "icon": "wrench",
+      "color": "#9C7CF0",
+      "items": [
         {
           "id": "datecalc",
           "name": "날짜 계산",
@@ -347,6 +367,13 @@
           "name": "타이머·알람",
           "type": "tool",
           "target": "timer"
+        },
+        {
+          "id": "calc",
+          "name": "계산기",
+          "type": "app",
+          "target": "calc.exe",
+          "icon": "builtin:calculator"
         },
         {
           "id": "notepad",
@@ -391,13 +418,6 @@
           "target": "cliphistory"
         },
         {
-          "id": "calc",
-          "name": "계산기",
-          "type": "app",
-          "target": "calc.exe",
-          "icon": "builtin:calculator"
-        },
-        {
           "id": "snip",
           "name": "캡처 도구",
           "type": "app",
@@ -409,18 +429,6 @@
           "name": "웹페이지 저장",
           "type": "tool",
           "target": "webcapture"
-        },
-        {
-          "id": "news",
-          "name": "키워드 뉴스",
-          "type": "tool",
-          "target": "news"
-        },
-        {
-          "id": "laws",
-          "name": "법령 개정 알림",
-          "type": "tool",
-          "target": "laws"
         }
       ]
     }

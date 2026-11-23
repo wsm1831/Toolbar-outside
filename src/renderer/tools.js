@@ -615,6 +615,7 @@
   let parcelMode = 'one';
   const parcel = {
     icon: 'land-plot',
+    window: true, // 독 위 패널 대신 따로 뜨는 창 (끌어서 옮길 수 있게)
     render(el, { api }) {
       el.append(h(`
         <div class="seg" role="tablist"><button data-m="one">한 필지</button><button data-m="many">여러 필지</button></div>

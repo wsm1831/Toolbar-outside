@@ -323,7 +323,7 @@
     if (!sel.options.length) {
       for (const name of await api.weatherCities()) sel.add(new Option(name, name));
     }
-    sel.value = w.city;
+    setWeatherOption(w);
     const n = { on: true, keywords: [], notify: true, ...(cfg.news || {}) };
     $('#news-on').checked = n.on;
     $('#news-notify').checked = n.notify;
@@ -350,10 +350,48 @@
     markDirty();
   };
   ['#quiet-on', '#quiet-start', '#quiet-end'].forEach((s) => $(s).addEventListener('change', quietSync));
+  // 직접 찾은 지역(lat·lon이 있는 것)은 목록 맨 위의 '찾은 지역' 칸으로 보여 준다
+  let customPlace = null;
+  function setWeatherOption(w) {
+    const sel = $('#weather-city');
+    const old = sel.querySelector('option[value="__custom"]');
+    if (old) old.remove();
+    customPlace = (w.lat && w.lon) ? { city: w.city, full: w.full || w.city, lat: w.lat, lon: w.lon } : null;
+    if (customPlace) {
+      sel.add(new Option(`${customPlace.full} (찾은 지역)`, '__custom'), 0);
+      sel.value = '__custom';
+    } else sel.value = w.city;
+  }
   const weatherSync = () => {
-    cfg.weather = { on: $('#weather-on').checked, city: $('#weather-city').value, air: $('#weather-air').checked };
+    const v = $('#weather-city').value;
+    if (v !== '__custom') { const o = $('#weather-city option[value="__custom"]'); if (o) o.remove(); customPlace = null; }
+    cfg.weather = { on: $('#weather-on').checked, air: $('#weather-air').checked, ...(customPlace || { city: v }) };
     markDirty();
   };
+  async function findPlace() {
+    const q = $('#weather-q').value.trim();
+    const box = $('#weather-results');
+    if (!q) return;
+    box.hidden = false;
+    box.innerHTML = '<li class="empty">찾는 중…</li>';
+    const list = await api.weatherSearch(q);
+    box.innerHTML = '';
+    if (!list.length) { box.innerHTML = '<li class="empty">찾지 못했습니다. 시·군 이름으로 다시 찾아보세요.</li>'; return; }
+    for (const p of list) {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = p.full;
+      b.addEventListener('click', () => {
+        setWeatherOption({ city: p.name, full: p.full, lat: p.lat, lon: p.lon });
+        box.hidden = true; $('#weather-q').value = '';
+        weatherSync();
+      });
+      li.appendChild(b); box.appendChild(li);
+    }
+  }
+  $('#weather-find').addEventListener('click', findPlace);
+  $('#weather-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); findPlace(); } });
   $('#weather-on').addEventListener('change', weatherSync);
   $('#weather-city').addEventListener('change', weatherSync);
   $('#weather-air').addEventListener('change', weatherSync);

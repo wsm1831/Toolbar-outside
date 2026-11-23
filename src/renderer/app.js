@@ -200,7 +200,9 @@
     document.querySelectorAll('.tile .badge').forEach((b) => b.remove());
     for (const [qid, n] of [['news', newsNow.unread], ['laws', lawsNow.unread]]) {
       if (!n) continue;
-      const tile = dock.querySelector(`[data-qid="${qid}"]`) || dock.querySelector('.tile-cat[data-id="utils"]');
+      // 바로가기에 있으면 그 아이콘에, 아니면 그 도구가 들어 있는 카테고리 아이콘에
+      const owner = (config.categories || []).find((c) => !c.pinned && (c.items || []).some((it) => it.type === 'tool' && it.target === qid));
+      const tile = dock.querySelector(`[data-qid="${qid}"]`) || (owner && dock.querySelector(`.tile-cat[data-id="${CSS.escape(owner.id)}"]`));
       if (!tile || tile.querySelector('.badge')) continue;
       const b = document.createElement('span');
       b.className = 'badge';
@@ -313,6 +315,7 @@
   function openPanel(item, cat, anchor) {
     const tool = window.TOOLS[item.target];
     if (!tool) return showToast(`알 수 없는 도구입니다: ${item.target}`);
+    if (tool.window) { closePop(); api.openToolWindow(item.target, item.name, cat.color); return; } // 따로 뜨는 창
     if (anchor) { openCatId = null; openQuickId = item.id; markActive(); } // 독에서 바로 연 패널
     openTool = item.target;
     prepPop();
@@ -407,7 +410,7 @@
   weatherBtn.addEventListener('click', async () => {
     if (!weatherNow) return;
     if (weatherNow.error) { api.refreshWeather(); return; }
-    const res = await api.openItem({ type: 'url', target: `https://search.naver.com/search.naver?query=${encodeURIComponent(`${weatherNow.city} 날씨`)}` });
+    const res = await api.openItem({ type: 'url', target: `https://search.naver.com/search.naver?query=${encodeURIComponent(`${weatherNow.full || weatherNow.city} 날씨`)}` });
     if (!res.ok) showToast(`날씨 페이지를 열지 못했습니다: ${res.message}`);
   });
   api.onWeather(renderWeather);

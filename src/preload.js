@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('api', {
   saveMemo: (text) => ipcRenderer.invoke('memo:save', text),
 
   capturePage: (url, format, opts) => ipcRenderer.invoke('capture:page', url, format, opts),
+  openToolWindow: (id, name, color) => ipcRenderer.invoke('tool:window', id, name, color),
   openClip: (url) => ipcRenderer.invoke('clip:open', url),
   clipCapture: (format, bodyOnly) => ipcRenderer.invoke('clip:capture', format, bodyOnly),
   clipNav: (action, url) => ipcRenderer.invoke('clip:nav', action, url),
@@ -50,6 +51,7 @@ contextBridge.exposeInMainWorld('api', {
   onNews: (cb) => ipcRenderer.on('news:update', (e, st) => cb(st)),
   getWeather: () => ipcRenderer.invoke('weather:get'),
   weatherCities: () => ipcRenderer.invoke('weather:cities'),
+  weatherSearch: (q) => ipcRenderer.invoke('weather:search', q),
   refreshWeather: () => ipcRenderer.invoke('weather:refresh'),
   onWeather: (cb) => ipcRenderer.on('weather:update', (e, st) => cb(st)),
 

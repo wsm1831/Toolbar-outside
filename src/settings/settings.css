@@ -220,3 +220,9 @@ body.sorting, body.sorting * { cursor: grabbing !important; user-select: none; }
 .sep-nav .sep-del { width: 24px; height: 24px; opacity: 0; }
 .sep-nav:hover .sep-del, .sep-nav:hover .grip { opacity: 1; }
 .sep-nav .grip { opacity: 0.5; }
+
+/* 날씨 지역 찾기 결과 */
+.wres { list-style: none; margin: 0 0 10px 100px; padding: 4px; max-width: 420px; max-height: 220px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.wres button { display: block; width: 100%; padding: 6px 10px; border: 0; border-radius: 6px; background: transparent; text-align: left; }
+.wres button:hover, .wres button:focus-visible { background: #EEF1F6; }
+.wres .empty { padding: 6px 10px; color: var(--ink-dim); }
