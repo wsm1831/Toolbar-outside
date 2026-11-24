@@ -506,8 +506,8 @@
         el.querySelectorAll('button').forEach((b) => { b.disabled = false; });
         if (r.ok && format === 'text') {
           // 제목 / (출처) / 본문 / 주소 순서로 복사
-          await api.writeClipboard(r.text);
-          status.textContent = `내용을 복사했습니다 (${r.length.toLocaleString()}자). 한글·워드에 붙여 넣으세요.`;
+          if (r.html) await api.writeClipboardHtml(r.text, r.html); else await api.writeClipboard(r.text);
+          status.textContent = `내용을 복사했습니다 (${r.length.toLocaleString()}자). 한글·워드에 붙여 넣으면 제목·표·그림 서식도 함께 들어갑니다.`;
         } else if (r.ok) status.textContent = `${r.bodyOnly ? '본문만' : '원본 화면 그대로'} 저장했습니다: ${r.file}`;
         else if (r.canceled) status.textContent = '저장을 취소했습니다.';
         else status.textContent = `저장하지 못했습니다: ${r.message}`;

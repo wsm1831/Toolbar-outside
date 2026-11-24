@@ -538,9 +538,37 @@ const plainUA = (ua) => ua.replace(/\s(WorkToolbar|toolbar-outside)\/\S+/gi, '')
 // 본문 찾기: Mozilla Readability(Firefox 읽기 모드)로 광고·메뉴·댓글을 뺀 기사 본문을 찾는다.
 // 네이버 블로그처럼 본문이 iframe 안에 있는 경우를 위해 모든 프레임에서 찾아 가장 긴 것을 쓴다.
 const READABILITY_JS = () => fs.readFileSync(path.join(__dirname, 'vendor', 'readability', 'Readability.js'), 'utf8');
+// 한글·워드에 붙여 넣기 좋게 HTML 다듬기: 그림·링크 주소를 전체 주소로, 그림 폭은 화면에 보이던 크기(최대 600px),
+// 표에는 테두리. sizes는 원래 페이지에 그려진 그림 폭 (주소 → px)
+const CLIPIFY_JS = `function __clipify(box, sizes) {
+  box.querySelectorAll('script, style, noscript, iframe, button, input, select, textarea').forEach((e) => e.remove());
+  box.querySelectorAll('img').forEach((im) => {
+    const src = im.currentSrc || im.src || im.getAttribute('data-src') || '';
+    if (!src || src.startsWith('data:image/gif')) { im.remove(); return; }
+    im.setAttribute('src', src);
+    im.removeAttribute('srcset'); im.removeAttribute('loading'); im.removeAttribute('height');
+    let w = sizes.get(src) || Number(im.getAttribute('width')) || 0;
+    if (w > 600) w = 600;
+    if (w > 0) im.setAttribute('width', String(Math.round(w)));
+  });
+  box.querySelectorAll('a[href]').forEach((a) => a.setAttribute('href', a.href));
+  box.querySelectorAll('table').forEach((t) => {
+    t.setAttribute('border', '1'); t.setAttribute('cellpadding', '4'); t.setAttribute('cellspacing', '0');
+    t.style.borderCollapse = 'collapse';
+  });
+  return box.innerHTML;
+}
+function __imgSizes() {
+  const m = new Map();
+  for (const im of document.images) if (im.clientWidth > 0) m.set(im.currentSrc || im.src, im.clientWidth);
+  return m;
+}`;
+
 async function extractArticle(wc) {
   const script = `${READABILITY_JS()}
+;${CLIPIFY_JS}
 ;(() => {
+  const sizes = __imgSizes();
   const a = new Readability(document.cloneNode(true)).parse();
   if (!a || !a.content) return null;
   const box = document.createElement('div');
@@ -554,8 +582,9 @@ async function extractArticle(wc) {
   if (firstHead && title && (title.includes(firstHead.innerText.trim()) || firstHead.innerText.trim().includes(title))) firstHead.remove();
   const text = box.innerText.replace(/\\n{3,}/g, '\\n\\n').trim();
   const content = box.innerHTML;
+  const clip = __clipify(box, sizes);
   box.remove();
-  return { title, byline: a.byline || '', site: a.siteName || '', text, content, url: location.href };
+  return { title, byline: a.byline || '', site: a.siteName || '', text, content, clip, url: location.href };
 })()`;
   let best = null;
   for (const f of wc.mainFrame.framesInSubtree) {
@@ -565,12 +594,52 @@ async function extractArticle(wc) {
   return best;
 }
 
-// 페이지에서 드래그해 선택한 글자 (모든 프레임 중 가장 긴 것)
-async function selectedText(wc) {
-  let best = '';
+// 페이지에서 드래그해 선택한 부분 (모든 프레임 중 가장 긴 것). 글자와 함께 서식 있는 HTML도 만든다.
+// 페이지의 CSS는 붙여 넣는 곳에 없으므로, 굵게·기울임·밑줄·글자색·배경색·글자 크기를 각 요소에 직접 적어 둔다.
+const SELECTION_JS = `${CLIPIFY_JS}
+;(() => {
+  const s = window.getSelection ? window.getSelection() : null;
+  const text = s ? String(s).trim() : '';
+  if (!text) return null;
+  const sizes = __imgSizes();
+  const baseSize = parseFloat(getComputedStyle(document.body).fontSize) || 16;
+  const box = document.createElement('div');
+  for (let r = 0; r < s.rangeCount; r++) {
+    const range = s.getRangeAt(r);
+    let root = range.commonAncestorContainer;
+    if (root.nodeType !== 1) root = root.parentElement;
+    const els = [...root.querySelectorAll('*')].filter((e) => range.intersectsNode(e)).slice(0, 5000);
+    els.forEach((e, i) => e.setAttribute('data-clipi', i));
+    const frag = range.cloneContents();
+    els.forEach((e) => e.removeAttribute('data-clipi'));
+    frag.querySelectorAll('[data-clipi]').forEach((c) => {
+      const o = els[Number(c.getAttribute('data-clipi'))];
+      c.removeAttribute('data-clipi'); c.removeAttribute('class');
+      if (!o) return;
+      const cs = getComputedStyle(o);
+      if (cs.display === 'none' || cs.visibility === 'hidden') { c.remove(); return; }
+      const st = [];
+      if (Number(cs.fontWeight) >= 600) st.push('font-weight:bold');
+      if (cs.fontStyle === 'italic') st.push('font-style:italic');
+      if (cs.textDecorationLine.includes('underline')) st.push('text-decoration:underline');
+      if (cs.textDecorationLine.includes('line-through')) st.push('text-decoration:line-through');
+      const rgb = cs.color.match(/\\d+/g) || [];
+      if (rgb.length >= 3 && Math.max(+rgb[0], +rgb[1], +rgb[2]) > 60) st.push('color:' + cs.color);
+      if (cs.backgroundColor && !/rgba\\(0, 0, 0, 0\\)|transparent/.test(cs.backgroundColor) && cs.backgroundColor !== 'rgb(255, 255, 255)') st.push('background-color:' + cs.backgroundColor);
+      const fs = parseFloat(cs.fontSize);
+      if (fs && Math.abs(fs - baseSize) >= 2) st.push('font-size:' + Math.round(fs * 0.75) + 'pt');
+      if (cs.textAlign === 'center' || cs.textAlign === 'right') st.push('text-align:' + cs.textAlign);
+      if (st.length) c.setAttribute('style', st.join(';')); else c.removeAttribute('style');
+    });
+    box.appendChild(frag);
+  }
+  return { text, html: __clipify(box, sizes) };
+})()`;
+async function selectedContent(wc) {
+  let best = null;
   for (const f of wc.mainFrame.framesInSubtree) {
-    const t = await f.executeJavaScript('String(window.getSelection ? window.getSelection() : "")').catch(() => '');
-    if (t && t.trim().length > best.length) best = t.trim();
+    const r = await f.executeJavaScript(SELECTION_JS).catch(() => null);
+    if (r && r.text && (!best || r.text.length > best.text.length)) best = r;
   }
   return best;
 }
@@ -712,6 +781,11 @@ async function saveArticle(art, url, format, parent) {
   }
 }
 
+function articleClipHtml(art) {
+  const meta = [art.site, art.byline].filter(Boolean).map(escHtml).join(' · ');
+  return `<h1>${escHtml(art.title)}</h1>${meta ? `<p style="color:#666666;font-size:9pt">${meta}</p>` : ''}${art.clip || art.content}`
+    + `<p style="color:#888888;font-size:9pt">출처: <a href="${escHtml(art.url)}">${escHtml(art.url)}</a></p>`;
+}
 function articleClipText(art) {
   const head = [art.title, [art.site, art.byline].filter(Boolean).join(' · ')].filter(Boolean).join('\n');
   return `${head}\n\n${art.text}\n\n출처: ${art.url}`;
@@ -731,7 +805,7 @@ async function capturePage(url, format, opts = {}) {
     const art = await extractArticle(win.webContents);
     if (format === 'text') {
       if (!art || !art.text) throw new Error('이 페이지에서 본문을 찾지 못했습니다. "원본 화면 그대로"를 켜고 PDF나 PNG로 저장해 보세요.');
-      return { ok: true, text: articleClipText({ ...art, url }), length: art.text.length };
+      return { ok: true, text: articleClipText({ ...art, url }), html: articleClipHtml({ ...art, url }), length: art.text.length };
     }
     if (!opts.full && art && art.content && art.text.length > 200) {
       win.destroy();
@@ -873,11 +947,11 @@ async function clipCapture(format, bodyOnly) {
   const wc = clipView.webContents;
   const url = wc.getURL();
   if (format === 'text') {
-    const sel = await selectedText(wc);
-    if (sel) return { ok: true, text: sel, length: sel.length, selection: true };
+    const sel = await selectedContent(wc);
+    if (sel) return { ok: true, text: sel.text, html: sel.html, length: sel.text.length, selection: true };
     const art = await extractArticle(wc);
     if (!art || !art.text) throw new Error('본문을 찾지 못했습니다. 복사할 부분을 드래그해서 선택한 뒤 다시 누르세요.');
-    return { ok: true, text: articleClipText(art), length: art.text.length };
+    return { ok: true, text: articleClipText(art), html: articleClipHtml(art), length: art.text.length };
   }
   if (bodyOnly) {
     const art = await extractArticle(wc);
@@ -1356,6 +1430,11 @@ function registerIpc() {
 
   ipcMain.handle('clipboard:read', () => clipboard.readText());
   ipcMain.handle('clipboard:write', (e, text) => { clipboard.writeText(String(text)); return true; });
+  // 서식 있는 복사: 한글·워드는 HTML을, 메모장은 글자를 붙여 넣는다
+  ipcMain.handle('clipboard:writeHtml', (e, text, html) => {
+    clipboard.write({ text: String(text || ''), html: `<html><head><meta charset="utf-8"></head><body>${String(html || '')}</body></html>` });
+    return true;
+  });
   ipcMain.handle('clipboard:history', () => clipHistory.slice());
   ipcMain.handle('clipboard:clearHistory', () => { clipHistory.length = 0; return true; });
 

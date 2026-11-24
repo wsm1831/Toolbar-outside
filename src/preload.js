@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('api', {
 
   readClipboard: () => ipcRenderer.invoke('clipboard:read'),
   writeClipboard: (text) => ipcRenderer.invoke('clipboard:write', text),
+  writeClipboardHtml: (text, html) => ipcRenderer.invoke('clipboard:writeHtml', text, html),
   clipHistory: () => ipcRenderer.invoke('clipboard:history'),
   clearClipHistory: () => ipcRenderer.invoke('clipboard:clearHistory'),
 

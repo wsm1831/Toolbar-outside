@@ -44,8 +44,8 @@ async function go(format) {
   btns.forEach((b) => { b.disabled = false; });
   busy = false;
   if (r.ok && format === 'text') {
-    await api.writeClipboard(r.text);
-    say(r.selection ? '선택한 부분을 복사했습니다' : '본문을 복사했습니다', `${r.length.toLocaleString()}자. 한글·워드에 붙여 넣으세요.`);
+    if (r.html) await api.writeClipboardHtml(r.text, r.html); else await api.writeClipboard(r.text);
+    say(r.selection ? '선택한 부분을 복사했습니다' : '본문을 복사했습니다', `${r.length.toLocaleString()}자. 한글·워드에 붙여 넣으면 제목·표·그림 서식도 함께 들어갑니다.`);
   } else if (r.ok) say('저장했습니다', `${r.file}${r.cut ? '\n페이지가 너무 길어 아래쪽 일부는 잘렸습니다.' : ''}`);
   else if (!r.canceled) say(`저장하지 못했습니다: ${r.message}`, '', true);
 }
