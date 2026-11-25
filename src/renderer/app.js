@@ -312,8 +312,10 @@
     const row = document.createElement('div');
     row.className = 'row';
     const items = cat.items || [];
-    // 13개까지는 한 줄, 더 많으면 두 줄로 고르게 나눈다
-    row.style.setProperty('--cols', items.length > 13 ? Math.ceil(items.length / 2) : Math.max(items.length, 1));
+    // 화면 폭에 들어가면 한 줄로, 안 들어가면 여러 줄로 고르게 나눈다
+    const fitW = Math.max(1, Math.floor((window.innerWidth - 40) / (52 + 8)));
+    const rowsW = Math.ceil(items.length / Math.min(Math.max(items.length, 1), fitW));
+    row.style.setProperty('--cols', Math.max(Math.ceil(items.length / rowsW), 1));
     if (document.body.classList.contains('vertical') && items.length) {
       // 세로 배치: 아이콘도 세로로 쌓고, 화면 높이에 다 안 들어가면 여러 줄로 고르게 나눈다
       const fit = Math.max(1, Math.floor((window.innerHeight - 40) / (52 + 8)));
