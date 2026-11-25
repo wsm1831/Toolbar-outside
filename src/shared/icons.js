@@ -62,8 +62,6 @@ window.ICONS = {
  "notepad-text": "<path d=\"M8 2v4\" /><path d=\"M12 2v4\" /><path d=\"M16 2v4\" /><rect width=\"16\" height=\"18\" x=\"4\" y=\"4\" rx=\"2\" /><path d=\"M8 10h6\" /><path d=\"M8 14h8\" /><path d=\"M8 18h5\" />",
  "land-plot": "<path d=\"m12 8 6-3-6-3v10\" /><path d=\"m8 11.99-5.5 3.14a1 1 0 0 0 0 1.74l8.5 4.86a2 2 0 0 0 2 0l8.5-4.86a1 1 0 0 0 0-1.74L16 12\" /><path d=\"m6.49 12.85 11.02 6.3\" /><path d=\"M17.51 12.85 6.5 19.15\" />",
  "gavel": "<path d=\"m14 13-8.381 8.38a1 1 0 0 1-3.001-3l8.384-8.381\" /><path d=\"m16 16 6-6\" /><path d=\"m21.5 10.5-8-8\" /><path d=\"m8 8 6-6\" /><path d=\"m8.5 7.5 8 8\" />",
- "chevron-right": "<path d=\"m9 18 6-6-6-6\" />",
- "panel-right": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M15 3v18\" />",
- "panel-bottom": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M3 15h18\" />"
+ "chevron-right": "<path d=\"m9 18 6-6-6-6\" />"
 };
 window.icon = (name, size = 24) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${window.ICONS[name] || window.ICONS["link"]}</svg>`;

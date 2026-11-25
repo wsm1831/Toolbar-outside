@@ -202,7 +202,6 @@
     const vertical = config.appearance?.position === 'right';
     document.body.classList.toggle('vertical', vertical);
     const posBtn = $('#btn-pos');
-    posBtn.innerHTML = window.icon(vertical ? 'panel-bottom' : 'panel-right', 16);
     posBtn.setAttribute('aria-label', vertical ? '툴바를 화면 아래에 가로로' : '툴바를 오른쪽 끝에 세로로');
     drawNewsBadge();
   }

@@ -135,16 +135,40 @@ body.awake #dock { opacity: 1; }
 
 /* 오른쪽 끝: 녹색 불빛(위) + 설정(아래). 둘을 합친 높이 = 타일 높이 */
 .side-stack {
-  display: grid;
-  grid-template-areas: "lamp pos" "set pos";
-  grid-template-columns: 26px 22px;
-  align-content: space-between;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   height: var(--tile);
   margin-left: -2px;
 }
-.mini-awake { grid-area: lamp; }
-.mini-settings { grid-area: set; }
-.side-stack .mini-pos { grid-area: pos; width: 22px; height: var(--tile); }
+
+/* 위치 바꾸기: 툴바 끝의 얇은 막대 (가로일 때 오른쪽 끝 세로 막대, 세로일 때 맨 아래 가로 막대) */
+.pos-bar {
+  position: relative;
+  align-self: stretch;
+  width: 12px;
+  margin: -8px -8px -8px -2px;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--glass-line);
+  border-radius: 0 23px 23px 0;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pos-bar::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 3px; height: 22px;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: var(--ink-dim);
+  opacity: 0.45;
+}
+.pos-bar:hover { background: rgba(255, 255, 255, 0.12); }
+.pos-bar:hover::after { opacity: 0.9; }
+.pos-bar:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
 .mini {
   width: 26px;
   height: 24px;
@@ -626,8 +650,12 @@ body.vertical .tile-cat.active::after { bottom: auto; top: 50%; left: auto; righ
 body.vertical #clock, body.vertical .weather { width: 100%; min-width: 0; padding: 4px 0; }
 body.vertical button#clock { height: auto; }
 body.vertical .weather { height: auto; }
-body.vertical .side-stack { grid-template-areas: "lamp set" "pos pos"; grid-template-columns: 26px 26px; height: auto; gap: 2px; margin: 0; }
-body.vertical .side-stack .mini-pos { width: 100%; height: 22px; }
+body.vertical .side-stack { flex-direction: row; justify-content: center; height: auto; gap: 2px; margin: 0; }
+body.vertical .pos-bar {
+  flex: none; width: auto; height: 12px; margin: -2px -8px -8px;
+  border-left: 0; border-top: 1px solid var(--glass-line); border-radius: 0 0 23px 23px;
+}
+body.vertical .pos-bar::after { width: 22px; height: 3px; }
 body.vertical #pop { bottom: auto; }
 body.vertical #pop .row { transform-origin: 100% var(--oy, 50%); animation-name: row-in-x; }
 body.vertical #pop .row .tile { animation-name: rise-x; }
