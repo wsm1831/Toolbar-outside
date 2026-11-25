@@ -330,7 +330,7 @@
     $('#key-law').value = (cfg.keys && cfg.keys.lawOC) || '';
     $('#key-data').value = (cfg.keys && cfg.keys.dataGoKr) || '';
     showHol(await api.getHolidays());
-    const L = { on: true, notify: false, items: ['산업입지 및 개발에 관한 법률', '산업집적활성화 및 공장설립에 관한 법률', '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률', '국토의 계획 및 이용에 관한 법률'], ...(cfg.laws || {}) };
+    const L = { on: true, notify: false, items: ['산업입지 및 개발에 관한 법률', '산업집적활성화 및 공장설립에 관한 법률', '산업단지 인ㆍ허가 절차 간소화를 위한 특례법', '국토의 계획 및 이용에 관한 법률', '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률'], ...(cfg.laws || {}) };
     $('#laws-on').checked = L.on;
     $('#laws-notify').checked = L.notify;
     $('#laws-items').value = L.items.join('\n');

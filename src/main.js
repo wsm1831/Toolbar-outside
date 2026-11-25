@@ -171,6 +171,12 @@ function migrateConfig(cfg) {
     const oldDefault = new Set(["2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-03-02", "2026-05-05", "2026-05-25", "2026-06-03", "2026-08-17", "2026-09-24", "2026-09-25", "2026-09-26", "2026-10-05", "2026-10-09", "2026-12-25", "2027-01-01", "2027-02-05", "2027-02-06", "2027-02-07", "2027-02-08", "2027-03-01", "2027-05-05", "2027-05-13", "2027-08-16", "2027-09-14", "2027-09-15", "2027-09-16", "2027-10-04", "2027-10-11", "2027-12-27"]);
     next.holidays = next.holidays.filter((d) => !oldDefault.has(d));
   }
+  if (from < 24 && next.laws && Array.isArray(next.laws.items)) {
+    // v24: 관심 법령 기본값에 '산업단지 인ㆍ허가 절차 간소화를 위한 특례법' 추가, 순서 정리 (기본값을 그대로 쓰던 경우만)
+    const oldDef = ["산업입지 및 개발에 관한 법률", "산업집적활성화 및 공장설립에 관한 법률", "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률", "국토의 계획 및 이용에 관한 법률"];
+    const same = next.laws.items.length === oldDef.length && oldDef.every((n) => next.laws.items.includes(n));
+    if (same) next.laws = { ...next.laws, items: def.laws.items };
+  }
   writeConfig(next);
   return next;
 }
@@ -1126,7 +1132,7 @@ async function vworldParcel(x, y) {
 // 법률 이름을 넣으면 그 법의 시행령·시행규칙까지 함께 본다. OC 값은 설정 창에서 입력.
 const LAWS_FILE = () => userFile('laws.json');
 let lawsState = null; // { known: { 법령명: { mst, prom, enf, kind } }, events: [...], checkedAt, error }
-const DEFAULT_LAWS = ['산업입지 및 개발에 관한 법률', '산업집적활성화 및 공장설립에 관한 법률', '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률', '국토의 계획 및 이용에 관한 법률'];
+const DEFAULT_LAWS = ['산업입지 및 개발에 관한 법률', '산업집적활성화 및 공장설립에 관한 법률', '산업단지 인ㆍ허가 절차 간소화를 위한 특례법', '국토의 계획 및 이용에 관한 법률', '공익사업을 위한 토지 등의 취득 및 보상에 관한 법률'];
 function lawsCfg() { return { on: true, notify: false, items: DEFAULT_LAWS, ...(config.laws || {}) }; }
 function loadLaws() {
   if (lawsState) return lawsState;
@@ -1134,13 +1140,22 @@ function loadLaws() {
   return lawsState;
 }
 function saveLaws() { fs.writeFile(LAWS_FILE(), JSON.stringify(lawsState), () => {}); }
-const squash = (t) => String(t || '').replace(/\s+/g, '');
+const squash = (t) => String(t || '').replace(/[\s·ㆍ・‧]+/g, ''); // 띄어쓰기·가운뎃점 차이는 무시
+// 보여 주는 순서: 설정에 적은 법 순서대로, 각 법 안에서는 법률 → 시행령 → 시행규칙
+function lawOrder(name, items) {
+  const n = squash(name);
+  let idx = items.length; let base = '';
+  items.forEach((w, i) => { const q = squash(w); if (n.startsWith(q) && q.length > base.length) { idx = i; base = q; } });
+  const rest = n.slice(base.length);
+  const kind = !rest ? 0 : rest.includes('시행령') ? 1 : rest.includes('시행규칙') ? 2 : 3;
+  return idx * 10 + kind;
+}
 function lawsPublic() {
   const st = loadLaws(); const cfg = lawsCfg();
   const hidden = cfg.hidden || []; // 목록에서 하나씩 지운(더 이상 지켜보지 않는) 법령
   const watched = Object.entries(st.known).map(([name, v]) => ({ name, ...v }))
     .filter((l) => !hidden.includes(l.name) && cfg.items.some((w) => squash(l.name).startsWith(squash(w))))
-    .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    .sort((a, b) => lawOrder(a.name, cfg.items) - lawOrder(b.name, cfg.items) || a.name.localeCompare(b.name, 'ko'));
   return { on: cfg.on, hidden: hidden.length, events: st.events, unread: st.events.filter((e) => !e.read).length, watched, checkedAt: st.checkedAt || 0, error: st.error || '' };
 }
 function sendLaws() { if (dockWin && !dockWin.isDestroyed()) dockWin.webContents.send('laws:update', lawsPublic()); }
@@ -1158,6 +1173,11 @@ async function refreshLaws() {
       let j; try { j = JSON.parse(text); } catch { throw new Error(text.slice(0, 120).replace(/<[^>]+>/g, ' ').trim() || `HTTP ${res.status}`); }
       let list = (j.LawSearch && j.LawSearch.law) || [];
       if (!Array.isArray(list)) list = [list];
+      if (!list.length && /[·ㆍ・‧]/.test(name)) {
+        // 가운뎃점 글자가 달라 못 찾으면 가운뎃점 앞부분으로 다시 찾는다 (예: '산업단지 인ㆍ허가 …')
+        const r2 = await fetchWithTimeout(url.replace(encodeURIComponent(name), encodeURIComponent(name.split(/[·ㆍ・‧]/)[0].trim())), 15000);
+        try { const j2 = JSON.parse(await r2.text()); list = (j2.LawSearch && j2.LawSearch.law) || []; if (!Array.isArray(list)) list = [list]; } catch { /* 그대로 */ }
+      }
       anyOk = true;
       for (const l of list) {
         const lname = l['법령명한글'];

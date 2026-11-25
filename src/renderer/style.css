@@ -640,7 +640,13 @@ button#clock:focus-visible { outline: 2px solid #fff; }
 
 /* ---------- 오른쪽 끝 세로 배치 ---------- */
 body.vertical #stage { flex-direction: row; justify-content: flex-end; align-items: center; padding: 0 10px 0 0; }
-body.vertical #dock { flex-direction: column; max-height: calc(100vh - 20px); overflow-y: auto; scrollbar-width: none; }
+body.vertical #dock { flex-direction: column; width: calc(var(--tile) + 18px); max-height: calc(100vh - 20px); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+/* 세로일 때 두께 = 가로일 때 높이(타일 + 여백). 넓은 것들은 위아래로 쌓는다 */
+body.vertical #clock-date { font-size: 10.5px; letter-spacing: -0.02em; white-space: nowrap; }
+body.vertical .weather .w-bottom { flex-direction: column; gap: 2px; }
+body.vertical .weather .w-city { max-width: var(--tile); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.vertical .side-stack .mini { width: 24px; }
+body.vertical #pop .row { grid-template-columns: repeat(var(--cols), var(--tile)); grid-template-rows: repeat(var(--rows), var(--tile)); grid-auto-flow: column; }
 body.vertical #cats { flex-direction: column; }
 body.vertical .sep { width: auto; height: 1px; align-self: stretch; margin: 4px 6px; }
 body.vertical .tile:hover { transform: translateX(-3px); }
@@ -650,7 +656,7 @@ body.vertical .tile-cat.active::after { bottom: auto; top: 50%; left: auto; righ
 body.vertical #clock, body.vertical .weather { width: 100%; min-width: 0; padding: 4px 0; }
 body.vertical button#clock { height: auto; }
 body.vertical .weather { height: auto; }
-body.vertical .side-stack { flex-direction: row; justify-content: center; height: auto; gap: 2px; margin: 0; }
+body.vertical .side-stack { flex-direction: row; justify-content: center; height: auto; gap: 0; margin: 0; }
 body.vertical .pos-bar {
   flex: none; width: auto; height: 12px; margin: -2px -8px -8px;
   border-left: 0; border-top: 1px solid var(--glass-line); border-radius: 0 0 23px 23px;
