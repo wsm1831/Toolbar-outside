@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('api', {
   onConfigChanged: (cb) => ipcRenderer.on('config:changed', (e, cfg) => cb(cfg)),
 
   setIgnoreMouse: (ignore) => ipcRenderer.send('dock:ignoreMouse', ignore),
+  setDockPosition: (pos) => ipcRenderer.invoke('dock:position', pos),
   focusDock: () => ipcRenderer.send('dock:focus'),
   onBlur: (cb) => ipcRenderer.on('dock:blur', () => cb()),
 
@@ -48,6 +49,9 @@ contextBridge.exposeInMainWorld('api', {
   getNews: () => ipcRenderer.invoke('news:get'),
   refreshNews: () => ipcRenderer.invoke('news:refresh'),
   setNewsKeywords: (list) => ipcRenderer.invoke('news:setKeywords', list),
+  removeNews: (link) => ipcRenderer.invoke('news:remove', link),
+  removeLawEvent: (key) => ipcRenderer.invoke('laws:removeEvent', key),
+  hideLaw: (name, on) => ipcRenderer.invoke('laws:hide', name, on),
   clearNews: () => ipcRenderer.invoke('news:clear'),
   clearLaws: () => ipcRenderer.invoke('laws:clear'),
   readNews: (link) => ipcRenderer.invoke('news:read', link),

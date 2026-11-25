@@ -18,7 +18,7 @@ Electron 판과 이후 C# WPF 판이 **같은 파일을 그대로 읽도록** �
       ]
     }
   ],
-  "holidays": ["2026-01-01"]
+  "holidays": ["2026-05-01"]
 }
 ```
 
@@ -26,7 +26,7 @@ Electron 판과 이후 C# WPF 판이 **같은 파일을 그대로 읽도록** �
 - 툴바는 `categories` 순서 그대로 그린다.
 - `{ "id": "...", "type": "separator" }` 는 구분선. 연달아 있거나 맨 앞·끝이면 그리지 않는다.
 - `"pinned": true` 인 카테고리는 버튼 없이 항목들을 툴바에 바로 놓는다(툴바 바로가기).
-- 그 밖의 최상위 값: `weather`(날씨·미세먼지. `city` 이름, 직접 찾은 지역은 `full`·`lat`·`lon` 좌표도 저장), `news`(키워드 뉴스), `laws`(법령 개정 알림), `keys`(API 인증키 — 이 PC에만 저장, 배포 파일에 넣지 않음), `holidays`(직접 넣은 쉬는 날).
+- 그 밖의 최상위 값: `weather`(날씨·미세먼지. `city` 이름, 직접 찾은 지역은 `full`·`lat`·`lon` 좌표도 저장), `news`(키워드 뉴스), `laws`(법령 개정 알림), `keys`(API 인증키 — 이 PC에만 저장, 배포 파일에 넣지 않음), `holidays`(직접 넣은 쉬는 날. 법정 공휴일은 자동 계산되므로 넣지 않아도 됨), `appearance.position`(`bottom` 화면 아래 가로 · `right` 오른쪽 끝 세로), `laws.hidden`(목록에서 지운 법령).
 
 ## 항목(item)
 

@@ -46,6 +46,13 @@
     tip.textContent = text;
     tip.hidden = false;
     const r = el.getBoundingClientRect();
+    if (document.body.classList.contains('vertical')) {
+      // 세로 배치: 아이콘이 놓인 검은 배경의 왼쪽에
+      const box = (el.closest('.row, .panel, #dock') || el).getBoundingClientRect();
+      tip.style.left = `${box.left - 8 - tip.offsetWidth / 2}px`;
+      tip.style.top = `${r.top + r.height / 2 + tip.offsetHeight / 2}px`;
+      return;
+    }
     const cx = r.left + r.width / 2;
     // 아이콘이 놓인 검은 배경(메뉴 줄·패널·독)의 윗변 기준
     const box = el.closest('.row, .panel, #dock') || el;
@@ -191,6 +198,12 @@
       else add(catTile(cat));
     }
     $('#btn-settings').innerHTML = window.icon('settings', 16);
+    // 위치: 화면 아래(가로, 기본) / 오른쪽 끝(세로)
+    const vertical = config.appearance?.position === 'right';
+    document.body.classList.toggle('vertical', vertical);
+    const posBtn = $('#btn-pos');
+    posBtn.innerHTML = window.icon(vertical ? 'panel-bottom' : 'panel-right', 16);
+    posBtn.setAttribute('aria-label', vertical ? '툴바를 화면 아래에 가로로' : '툴바를 오른쪽 끝에 세로로');
     drawNewsBadge();
   }
 
@@ -236,8 +249,25 @@
   }
 
   // 튀어오른 메뉴를 카테고리 버튼 위에 맞춘다 (화면 밖으로 나가지 않게)
+  // 메뉴·패널 크기가 바뀌면(내용을 늦게 불러오는 패널 등) 위치를 다시 맞춘다
+  let lastAnchor = null;
+  new ResizeObserver(() => { if (!pop.hidden && lastAnchor && lastAnchor.isConnected) anchorPop(lastAnchor); }).observe(pop);
   function anchorPop(anchorEl) {
+    lastAnchor = anchorEl;
     const a = anchorEl.getBoundingClientRect();
+    if (document.body.classList.contains('vertical')) {
+      // 세로 배치: 독 왼쪽에, 누른 버튼 높이에 맞춰 펼친다
+      const d = dock.getBoundingClientRect();
+      const cy = a.top + a.height / 2;
+      const ph = pop.offsetHeight;
+      const top = Math.max(12, Math.min(window.innerHeight - ph - 12, cy - ph / 2));
+      pop.style.left = 'auto';
+      pop.style.right = `${window.innerWidth - d.left + 16}px`;
+      pop.style.top = `${top}px`;
+      pop.style.setProperty('--oy', `${Math.max(20, Math.min(ph - 20, cy - top))}px`);
+      return;
+    }
+    pop.style.right = ''; pop.style.top = '';
     const center = a.left + a.width / 2;
     const w = pop.offsetWidth;
     const left = Math.max(12, Math.min(window.innerWidth - w - 12, center - w / 2));
@@ -353,6 +383,10 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(); });
 
   $('#btn-settings').addEventListener('click', () => { closePop(true); api.openSettings(); });
+  $('#btn-pos').addEventListener('click', () => {
+    closePop(true);
+    api.setDockPosition(document.body.classList.contains('vertical') ? 'bottom' : 'right');
+  });
 
   // ---------- 녹색 불빛 (화면 보호기 차단) ----------
   const awakeBtn = $('#btn-awake');
@@ -429,6 +463,12 @@
   }
   tick();
   setInterval(tick, 1000 * 10);
+  // 시계를 누르면 달력 (휴일 표시)
+  const CAL_ITEM = { id: '__calendar', name: '달력', type: 'tool', target: 'calendar' };
+  $('#clock').addEventListener('click', () => {
+    if (openQuickId === CAL_ITEM.id) return closePop();
+    openPanel(CAL_ITEM, { color: '#4C9BEF' }, $('#clock'));
+  });
 
   window.setTimerBadge = (text) => {
     const el = $('#timer-badge');

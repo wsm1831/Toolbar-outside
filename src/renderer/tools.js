@@ -527,6 +527,16 @@
     if (m < 1440) return `${Math.round(m / 60)}시간 전`;
     return `${Math.round(m / 1440)}일 전`;
   };
+  // 목록 한 줄 오른쪽의 × (하나만 지우기)
+  function delBtn(label, onClick) {
+    const b = document.createElement('button');
+    b.className = 'del'; b.type = 'button';
+    b.setAttribute('aria-label', label); b.title = label;
+    b.textContent = '×';
+    b.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+    return b;
+  }
+
   const news = {
     icon: 'newspaper',
     async render(el, { api }) {
@@ -584,6 +594,7 @@
             await api.openItem({ type: 'url', target: it.link });
             api.readNews(it.link);
           });
+          li.appendChild(delBtn('이 기사 지우기', async () => draw(await api.removeNews(it.link))));
           list.appendChild(li);
         }
         el.querySelector('.news-status').textContent = st.unread ? `안 읽은 기사 ${st.unread}건` : '모두 읽었습니다';
@@ -819,6 +830,7 @@
             li.querySelector('.nt').textContent = `${e.name} ${e.kind || '개정'}`;
             li.querySelector('.nm').textContent = `공포 ${ymd8(e.prom)} · 시행 ${ymd8(e.enf)}${isFuture(e.enf) ? ' (시행 예정)' : ''}`;
             li.querySelector('button').addEventListener('click', () => open(e.mst));
+            li.appendChild(delBtn('이 알림 지우기', async () => draw(await api.removeLawEvent(`${e.name}|${e.mst}`))));
             ul.appendChild(li);
           }
           ev.appendChild(ul);
@@ -832,7 +844,20 @@
           li.querySelector('.nt').textContent = l.name;
           li.querySelector('.nm').textContent = `${l.kind || ''} 공포 ${ymd8(l.prom)} · 시행 ${ymd8(l.enf)}${isFuture(l.enf) ? ' (시행 예정)' : ''}`;
           li.querySelector('button').addEventListener('click', () => open(l.mst));
+          li.appendChild(delBtn('목록에서 지우기 (더 이상 지켜보지 않음)', async () => {
+            if (!confirm(`'${l.name}'을(를) 목록에서 지울까요?\n앞으로 이 법령의 개정은 알려 드리지 않습니다.`)) return;
+            draw(await api.hideLaw(l.name));
+          }));
           list.appendChild(li);
+        }
+        if (st.hidden) {
+          const li = document.createElement('li');
+          li.className = 'empty';
+          const b = document.createElement('button');
+          b.className = 'linkish'; b.type = 'button';
+          b.textContent = `목록에서 지운 법령 ${st.hidden}개 다시 보기`;
+          b.addEventListener('click', async () => draw(await api.hideLaw('', false)));
+          li.appendChild(b); list.appendChild(li);
         }
         const when = st.checkedAt ? new Date(st.checkedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
         el.querySelector('.law-status').textContent = st.error && st.watched.length ? st.error : (unread.length ? `새 개정 ${unread.length}건` : when ? `마지막 확인 ${when}` : '');
@@ -851,6 +876,68 @@
     },
   };
 
-  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory, webcapture, news, parcel, laws };
-  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 저장', news: '키워드 뉴스', parcel: '필지 조회', laws: '법령 개정 알림' };
+
+  // ---------- 달력 (시계를 누르면) ----------
+  let calMonth = null; // 보고 있는 달 (창을 닫았다 열어도 오늘 달로)
+  const calendar = {
+    icon: 'calendar-days',
+    async render(el, { api }) {
+      el.append(h(`
+        <div class="cal-head">
+          <button class="icon-btn prev" aria-label="이전 달">${window.icon('chevron-left', 18)}</button>
+          <b class="cal-title" aria-live="polite"></b>
+          <button class="icon-btn next" aria-label="다음 달">${window.icon('chevron-right', 18)}</button>
+          <button class="btn ghost today">오늘</button>
+        </div>
+        <div class="cal-grid" role="grid"></div>
+        <ul class="cal-hols"></ul>`));
+      const hol = await api.getHolidays();
+      const names = (hol && hol.names) || {};
+      const now = today();
+      calMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      function draw() {
+        const y = calMonth.getFullYear(); const m = calMonth.getMonth();
+        el.querySelector('.cal-title').textContent = `${y}년 ${m + 1}월`;
+        const grid = el.querySelector('.cal-grid');
+        grid.innerHTML = DAYS.map((d, i) => `<span class="cal-dow${i === 0 ? ' sun' : i === 6 ? ' sat' : ''}">${d}</span>`).join('');
+        const first = new Date(y, m, 1);
+        const start = addDays(first, -first.getDay());
+        const weeks = Math.ceil((first.getDay() + new Date(y, m + 1, 0).getDate()) / 7);
+        for (let i = 0; i < weeks * 7; i++) {
+          const d = addDays(start, i);
+          const k = ymd(d);
+          const c = document.createElement('span');
+          c.className = 'cal-day';
+          if (d.getMonth() !== m) c.classList.add('other');
+          if (names[k] || d.getDay() === 0) c.classList.add('sun');
+          else if (d.getDay() === 6) c.classList.add('sat');
+          if (+d === +now) { c.classList.add('today'); c.setAttribute('aria-current', 'date'); }
+          c.textContent = d.getDate();
+          if (names[k]) { c.title = names[k]; c.setAttribute('aria-label', `${d.getDate()}일 ${names[k]}`); }
+          grid.appendChild(c);
+        }
+        // 이 달의 휴일 목록
+        const ul = el.querySelector('.cal-hols');
+        ul.innerHTML = '';
+        const prefix = `${y}-${pad(m + 1)}-`;
+        const list = Object.keys(names).filter((k) => k.startsWith(prefix)).sort();
+        if (!list.length) ul.innerHTML = '<li class="muted">이 달에는 공휴일이 없습니다</li>';
+        for (const k of list) {
+          const li = document.createElement('li');
+          li.innerHTML = '<span class="d"></span><span class="n"></span>';
+          li.querySelector('.d').textContent = fmt(parse(k)).replace(/^\d+\. /, '');
+          li.querySelector('.n').textContent = names[k];
+          ul.appendChild(li);
+        }
+      }
+      el.querySelector('.prev').addEventListener('click', () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1); draw(); });
+      el.querySelector('.next').addEventListener('click', () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1); draw(); });
+      el.querySelector('.today').addEventListener('click', () => { calMonth = new Date(now.getFullYear(), now.getMonth(), 1); draw(); });
+      el.addEventListener('wheel', (e) => { e.preventDefault(); calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + (e.deltaY > 0 ? 1 : -1), 1); draw(); }, { passive: false });
+      draw();
+    },
+  };
+
+  window.TOOLS = { memo, datecalc, unitconv, krmoney, timer, textclean, cliphistory, webcapture, news, parcel, laws, calendar };
+  window.TOOL_NAMES = { memo: '빠른 메모', datecalc: '날짜 계산', unitconv: '단위 환산', krmoney: '금액 한글 표기', timer: '타이머·알람', textclean: '텍스트 정리', cliphistory: '클립보드 기록', webcapture: '웹페이지 저장', news: '키워드 뉴스', parcel: '필지 조회', laws: '법령 개정 알림', calendar: '달력' };
 })();

@@ -166,6 +166,11 @@ function migrateConfig(cfg) {
     if (next.news) next.news = { ...next.news, notify: false };
     if (next.laws) next.laws = { ...next.laws, notify: false };
   }
+  if (from < 23 && Array.isArray(next.holidays)) {
+    // v23: 공휴일은 이제 자동 계산. 예전 기본값으로 들어 있던 날짜는 지우고(잘못된 2027-02-05 포함), 직접 넣은 날만 남긴다
+    const oldDefault = new Set(["2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-03-02", "2026-05-05", "2026-05-25", "2026-06-03", "2026-08-17", "2026-09-24", "2026-09-25", "2026-09-26", "2026-10-05", "2026-10-09", "2026-12-25", "2027-01-01", "2027-02-05", "2027-02-06", "2027-02-07", "2027-02-08", "2027-03-01", "2027-05-05", "2027-05-13", "2027-08-16", "2027-09-14", "2027-09-15", "2027-09-16", "2027-10-04", "2027-10-11", "2027-12-27"]);
+    next.holidays = next.holidays.filter((d) => !oldDefault.has(d));
+  }
   writeConfig(next);
   return next;
 }
@@ -211,9 +216,15 @@ function findExecutable(target) {
 const isProtocol = (t) => /^[a-z][a-z0-9+.-]+:/i.test(t);
 
 // ---------- 창 ----------
+const SIDE_WIDTH = 640; // 오른쪽 세로 배치일 때 창 폭 (독 + 왼쪽으로 펼쳐지는 메뉴·패널)
+const dockSide = () => (config && config.appearance && config.appearance.position === 'right' ? 'right' : 'bottom');
 function placeDock() {
   if (!dockWin) return;
   const { workArea } = screen.getPrimaryDisplay();
+  if (dockSide() === 'right') {
+    dockWin.setBounds({ x: workArea.x + workArea.width - SIDE_WIDTH, y: workArea.y, width: SIDE_WIDTH, height: workArea.height });
+    return;
+  }
   dockWin.setBounds({
     x: workArea.x,
     y: workArea.y + workArea.height - WINDOW_HEIGHT,
@@ -436,6 +447,7 @@ function toggleAwake() {
 
 // ---------- 날씨 (Open-Meteo, 가입·키 없이 쓰는 무료 날씨 서비스) ----------
 const CITIES = require('./shared/cities.json');
+const { krHolidayRange } = require('./shared/kr-holidays.js');
 let weatherState = null;
 function weatherCfg() { return { on: true, city: '서울', air: true, ...(config.weather || {}) }; }
 // 환경부 기준 미세먼지 등급 (PM10 / PM2.5 중 나쁜 쪽)
@@ -1125,10 +1137,11 @@ function saveLaws() { fs.writeFile(LAWS_FILE(), JSON.stringify(lawsState), () =>
 const squash = (t) => String(t || '').replace(/\s+/g, '');
 function lawsPublic() {
   const st = loadLaws(); const cfg = lawsCfg();
+  const hidden = cfg.hidden || []; // 목록에서 하나씩 지운(더 이상 지켜보지 않는) 법령
   const watched = Object.entries(st.known).map(([name, v]) => ({ name, ...v }))
-    .filter((l) => cfg.items.some((w) => squash(l.name).startsWith(squash(w))))
+    .filter((l) => !hidden.includes(l.name) && cfg.items.some((w) => squash(l.name).startsWith(squash(w))))
     .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-  return { on: cfg.on, events: st.events, unread: st.events.filter((e) => !e.read).length, watched, checkedAt: st.checkedAt || 0, error: st.error || '' };
+  return { on: cfg.on, hidden: hidden.length, events: st.events, unread: st.events.filter((e) => !e.read).length, watched, checkedAt: st.checkedAt || 0, error: st.error || '' };
 }
 function sendLaws() { if (dockWin && !dockWin.isDestroyed()) dockWin.webContents.send('laws:update', lawsPublic()); }
 async function refreshLaws() {
@@ -1151,7 +1164,7 @@ async function refreshLaws() {
         if (!lname || !squash(lname).startsWith(squash(name))) continue; // 시행령·시행규칙 포함, 다른 법은 제외
         const cur = { mst: String(l['법령일련번호'] || ''), prom: String(l['공포일자'] || ''), enf: String(l['시행일자'] || ''), kind: l['제개정구분명'] || '', dept: l['소관부처명'] || '' };
         const old = st.known[lname];
-        if (old && old.mst && cur.mst && old.mst !== cur.mst) {
+        if (old && old.mst && cur.mst && old.mst !== cur.mst && !(cfg.hidden || []).includes(lname)) {
           fresh.push({ name: lname, ...cur, at: Date.now(), read: false });
         }
         st.known[lname] = cur;
@@ -1345,8 +1358,17 @@ function registerIpc() {
     if (JSON.stringify(newsCfg()) !== newsBefore) refreshNews();
     if ((cfg.keys && cfg.keys.dataGoKr) && (cfg.keys.dataGoKr !== holKeyBefore)) refreshHolidays(true);
     if (JSON.stringify([lawsCfg(), config.keys && config.keys.lawOC]) !== lawsBefore) refreshLaws();
+    placeDock();
     if (dockWin) dockWin.webContents.send('config:changed', cfg);
     return true;
+  });
+  // 툴바의 버튼으로 위치 바꾸기: 화면 아래(가로) ↔ 오른쪽 끝(세로)
+  ipcMain.handle('dock:position', (e, pos) => {
+    config.appearance = { ...(config.appearance || {}), position: pos === 'right' ? 'right' : 'bottom' };
+    writeConfig(config);
+    if (dockWin) dockWin.webContents.send('config:changed', config);
+    setTimeout(placeDock, 30); // 화면이 새 배치로 바뀐 뒤 창을 옮긴다
+    return config.appearance.position;
   });
   ipcMain.handle('config:openFolder', () => shell.openPath(app.getPath('userData')));
 
@@ -1486,7 +1508,15 @@ function registerIpc() {
   ipcMain.handle('land:building', async (e, pnu) => {
     try { return { ok: true, items: await buildingInfo(String(pnu)) }; } catch (err) { return { ok: false, message: err.message }; }
   });
-  ipcMain.handle('holidays:get', () => loadHol());
+  // 공휴일 = 기본 계산(2025~2030) + 공공데이터포털 자료(있으면 이름은 이쪽이 우선) + 설정에서 직접 넣은 쉬는 날
+  ipcMain.handle('holidays:get', () => {
+    const st = loadHol();
+    const y = new Date().getFullYear();
+    const base = krHolidayRange(y - 1, y + 4);
+    const names = { ...base.names, ...st.names };
+    for (const d of config.holidays || []) if (!names[d]) names[d] = '쉬는 날';
+    return { ...st, dates: Object.keys(names).sort(), names };
+  });
   ipcMain.handle('holidays:refresh', (e, force) => refreshHolidays(!!force));
   ipcMain.handle('laws:get', () => lawsPublic());
   ipcMain.handle('laws:refresh', () => refreshLaws());
@@ -1507,6 +1537,19 @@ function registerIpc() {
   });
   ipcMain.handle('news:clear', () => { const st = loadNews(); st.items = []; saveNews(); sendNews(); return newsPublic(); });
   ipcMain.handle('laws:clear', () => { const st = loadLaws(); st.events = []; saveLaws(); sendLaws(); return lawsPublic(); });
+  // 목록에서 하나씩 지우기
+  ipcMain.handle('news:remove', (e, link) => { const st = loadNews(); st.items = st.items.filter((i) => i.link !== link); saveNews(); sendNews(); return newsPublic(); });
+  ipcMain.handle('laws:removeEvent', (e, key) => {
+    const st = loadLaws(); st.events = (st.events || []).filter((ev) => `${ev.name}|${ev.mst}` !== key); saveLaws(); sendLaws(); return lawsPublic();
+  });
+  ipcMain.handle('laws:hide', (e, name, on) => {
+    const cfg = lawsCfg();
+    const hidden = on === false ? [] : [...new Set([...(cfg.hidden || []), String(name)])]; // on === false: 숨긴 법령 모두 다시 보기
+    config.laws = { ...cfg, hidden };
+    writeConfig(config);
+    const st = loadLaws(); st.events = (st.events || []).filter((ev) => !hidden.includes(ev.name)); saveLaws();
+    sendLaws(); return lawsPublic();
+  });
   ipcMain.handle('news:read', (e, link) => {
     const st = loadNews();
     for (const i of st.items) if (link === '*' || i.link === link) i.read = true;

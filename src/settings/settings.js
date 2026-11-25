@@ -309,6 +309,8 @@
   // ---------- 일반 설정 ----------
   async function renderGeneral() {
     const op = cfg.appearance?.idleOpacity ?? 0.35;
+    posAtLoad = (cfg.appearance && cfg.appearance.position) === 'right' ? 'right' : 'bottom';
+    document.querySelectorAll('input[name="dock-pos"]').forEach((r) => { r.checked = r.value === posAtLoad; });
     $('#opacity').value = op;
     $('#opacity-out').textContent = `${Math.round(op * 100)}%`;
     const q = cfg.awake?.quiet || { on: true, start: '11:30', end: '13:00' };
@@ -333,6 +335,19 @@
     $('#laws-notify').checked = L.notify;
     $('#laws-items').value = L.items.join('\n');
     $('#login').checked = await api.getLogin();
+  }
+  let posAtLoad = 'bottom';
+  document.querySelectorAll('input[name="dock-pos"]').forEach((r) => r.addEventListener('change', () => {
+    cfg.appearance = { ...(cfg.appearance || {}), position: r.value };
+    markDirty();
+  }));
+  // 설정 창을 연 뒤 툴바 버튼으로 위치를 바꿨다면, 여기서 위치를 고치지 않은 한 그 위치를 그대로 둔다
+  async function keepDockPosition(c) {
+    const now = (c.appearance && c.appearance.position) === 'right' ? 'right' : 'bottom';
+    if (now !== posAtLoad) return c;
+    const live = await api.getConfig();
+    c.appearance = { ...(c.appearance || {}), position: (live.appearance && live.appearance.position) || 'bottom' };
+    return c;
   }
   $('#opacity').addEventListener('input', (e) => {
     cfg.appearance = cfg.appearance || {};
@@ -446,7 +461,7 @@
 
   // ---------- 저장 ----------
   $('#save').addEventListener('click', async () => {
-    await api.saveConfig(JSON.parse(JSON.stringify(cfg)));
+    await api.saveConfig(await keepDockPosition(JSON.parse(JSON.stringify(cfg))));
     dirty = false;
     api.setSettingsDirty(false);
     $('#save').disabled = true;
@@ -454,7 +469,7 @@
   });
   // 창을 닫을 때 저장하지 않은 변경이 있으면 메인 프로세스가 물어본다. '저장하고 닫기'를 고르면 여기서 저장한다.
   api.onSaveRequest(async () => {
-    await api.saveConfig(JSON.parse(JSON.stringify(cfg)));
+    await api.saveConfig(await keepDockPosition(JSON.parse(JSON.stringify(cfg))));
     dirty = false;
     api.setSettingsDirty(false);
     api.closeSettings();
